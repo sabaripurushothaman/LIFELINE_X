@@ -208,7 +208,7 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
               >
                 <Icon className="w-5 h-5" />
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border font-mono ${card.badgeClass}`}>
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md border font-mono ${card.badgeClass}`}>
                 {card.badge}
               </span>
             </div>
@@ -217,7 +217,7 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
             <div>
               <div
                 className={`${
-                  isLongText ? 'text-lg sm:text-xl font-bold tracking-normal' : 'text-3xl sm:text-4xl font-black tracking-tight'
+                  isLongText ? 'text-base sm:text-lg font-black tracking-normal' : 'text-3xl sm:text-4xl font-black tracking-tight'
                 } font-heading leading-none flex items-center gap-2`}
                 style={{ color: card.accentColor }}
               >
@@ -226,13 +226,13 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
                 )}
               </div>
-              <div className="text-xs font-black uppercase tracking-wider text-slate-800 mt-2 font-heading">
+              <div className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 mt-2 font-heading">
                 {card.label}
               </div>
             </div>
 
             {/* Subtext */}
-            <div className="text-[11px] text-slate-500 font-mono leading-tight pt-2.5 border-t border-slate-100 mt-3 truncate">
+            <div className="text-xs text-slate-600 font-mono leading-tight pt-2.5 border-t border-slate-100 mt-3 truncate">
               {card.subtext}
             </div>
           </div>

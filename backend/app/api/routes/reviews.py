@@ -45,7 +45,7 @@ async def submit_review(req: ReviewRequest):
         )
 
     store = get_store()
-    candidate = store.get_survivor_candidate(req.track_id)
+    candidate = store.get_survivor_candidate(req.track_id, analysis_id=req.analysis_id)
 
     if not candidate:
         raise HTTPException(status_code=404, detail=f"Candidate not found: {req.track_id}")

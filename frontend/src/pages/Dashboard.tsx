@@ -6,10 +6,17 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StatsGrid, { type LiveStats } from '../components/dashboard/StatsGrid';
-import RecentDetections from '../components/dashboard/RecentDetections';
+import TriageSorting from '../components/dashboard/TriageSorting';
 import { useSession } from '../context/SessionContext';
 import SessionSelector from '../components/common/SessionSelector';
 import type { SurvivorCandidate } from '../types';
+
+const DEMO_CANDIDATES: SurvivorCandidate[] = [
+  { track_id: 'LX-017', rescue_priority: 'CRITICAL', detection_confidence: 0.94, survivor_confidence: 0.96, movement_state: 'LOW MOVEMENT', evidence_quality: 'HIGH',   frame_count: 88, latitude: 13.04218, longitude: 80.16431, uncertainty_m: 12, geolocation_method: 'UAV_TELEMETRY_SYNCED', analysis_id: 'demo-flood-001', created_at: Date.now() - 12000 },
+  { track_id: 'LX-023', rescue_priority: 'HIGH',     detection_confidence: 0.91, survivor_confidence: 0.88, movement_state: 'MOVING',       evidence_quality: 'HIGH',   frame_count: 64, latitude: 13.04105, longitude: 80.16298, uncertainty_m: 18, geolocation_method: 'UAV_TELEMETRY_SYNCED', analysis_id: 'demo-flood-001', created_at: Date.now() - 21000 },
+  { track_id: 'LX-031', rescue_priority: 'HIGH',     detection_confidence: 0.69, survivor_confidence: 0.68, movement_state: 'LOW MOVEMENT', evidence_quality: 'MEDIUM', frame_count: 42, latitude: undefined, longitude: undefined, uncertainty_m: undefined, geolocation_method: undefined, analysis_id: 'demo-flood-001', created_at: Date.now() - 38000 },
+  { track_id: 'LX-044', rescue_priority: 'VERIFY',   detection_confidence: 0.71, survivor_confidence: 0.63, movement_state: 'UNKNOWN',      evidence_quality: 'LOW',    frame_count: 18, latitude: 13.04382, longitude: 80.16612, uncertainty_m: 35, geolocation_method: 'ESTIMATED_PROJECTION', analysis_id: 'demo-flood-001', created_at: Date.now() - 64000 },
+];
 
 /**
  * DASHBOARD — Mission Overview & Command Center.
@@ -22,9 +29,32 @@ const Dashboard: React.FC = () => {
   const [dashboardCandidates, setDashboardCandidates] = useState<SurvivorCandidate[]>([]);
   const navigate = useNavigate();
 
+  const handleCandidateUpdated = (updated: SurvivorCandidate) => {
+    setDashboardCandidates((prev) =>
+      prev.map((c) => (c.track_id === updated.track_id ? { ...c, ...updated } : c))
+    );
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
+        if (currentAnalysisId === 'demo-flood-001') {
+          setDashboardCandidates(DEMO_CANDIDATES);
+          setLiveStats({
+            totalCandidates: DEMO_CANDIDATES.length,
+            criticalCount: DEMO_CANDIDATES.filter((c) => c.rescue_priority === 'CRITICAL').length,
+            highCount: DEMO_CANDIDATES.filter((c) => c.rescue_priority === 'HIGH').length,
+            verifyCount: DEMO_CANDIDATES.filter((c) => c.rescue_priority === 'VERIFY').length,
+            backendOnline: true,
+            avgConfidence: 0.812,
+            isRealSession: false,
+            hasAnalyzed: true,
+            sessionName: 'demo-flood-001.mp4',
+            isDemoMode: true,
+          });
+          return;
+        }
+
         if (currentAnalysisId) {
           const res = (await api.getSurvivors(currentAnalysisId)) as {
             count: number;
@@ -55,12 +85,27 @@ const Dashboard: React.FC = () => {
           });
         } else if (analyses.length > 0) {
           const first = analyses[0];
+          const res = (await api.getSurvivors(first.id)) as {
+            count: number;
+            critical_count: number;
+            high_count: number;
+            verify_count: number;
+            candidates: SurvivorCandidate[];
+          };
+          const candidates = res.candidates ?? [];
+          setDashboardCandidates(candidates);
+          const avgConf =
+            candidates.length > 0
+              ? candidates.reduce((acc, c) => acc + (c.detection_confidence || 0), 0) / candidates.length
+              : 0;
+
           setLiveStats({
-            totalCandidates: first.candidate_count ?? 0,
+            totalCandidates: first.candidate_count ?? candidates.length,
             criticalCount: first.critical_count ?? 0,
             highCount: first.high_count ?? 0,
             verifyCount: first.verify_count ?? 0,
             backendOnline: true,
+            avgConfidence: avgConf,
             isRealSession: true,
             hasAnalyzed: first.status === 'COMPLETE',
             sessionName: first.video_filename || first.id,
@@ -281,28 +326,31 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Recent Detection Events Summary ── */}
+      {/* ── Triage Sorting Table (Rescue Priority) ── */}
       <div>
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2.5">
             <ShieldAlert className="w-5 h-5 text-sky-700" />
-            <h2 className="text-base font-heading font-black uppercase tracking-wider text-slate-900">
-              RECENT DETECTION EVENTS
+            <h2 className="text-base sm:text-lg font-heading font-black uppercase tracking-wider text-slate-900">
+              TRIAGE SORTING
             </h2>
           </div>
           <button
             type="button"
             onClick={() => navigate('/survivors')}
-            className="flex items-center gap-1.5 text-xs font-mono font-bold text-sky-700 hover:text-sky-900 transition-colors"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-mono font-bold text-sky-700 hover:text-sky-900 transition-colors"
           >
-            VIEW ALL SURVIVOR CANDIDATES <ArrowUpRight className="w-4 h-4" />
+            OPEN SURVIVOR INTEL CONSOLE <ArrowUpRight className="w-4 h-4" />
           </button>
         </div>
-        <RecentDetections
+        <TriageSorting
           candidates={dashboardCandidates}
-          isReal={isReal}
+          isReal={Boolean(liveStats?.isRealSession)}
           sessionName={currentAnalysis?.video_filename || currentAnalysisId || ''}
-          hasAnalyzed={currentAnalysis?.status === 'COMPLETE'}
+          hasAnalyzed={Boolean(liveStats?.hasAnalyzed)}
+          isAnalyzing={currentAnalysis?.status === 'RUNNING' || currentAnalysis?.status === 'PENDING'}
+          currentAnalysisId={currentAnalysisId || undefined}
+          onCandidateUpdated={handleCandidateUpdated}
         />
       </div>
 
