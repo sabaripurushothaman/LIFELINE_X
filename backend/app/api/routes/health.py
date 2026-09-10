@@ -124,11 +124,6 @@ async def system_status():
             "detail": "SQLite" if store.available else "In-memory fallback",
         },
         {
-            "label": "Live Camera",
-            "status": "NOT CONNECTED",
-            "detail": "No live camera device configured — recorded video replay only",
-        },
-        {
             "label": "Emergency Routing",
             "status": routing_status,
             "detail": routing_detail,

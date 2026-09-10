@@ -63,7 +63,7 @@ const DEFAULT_COMPONENTS: SystemComponent[] = [
   { label: 'EVIDENCE ENGINE', status: 'READY', detail: 'Multi-signal evidence chain engine ready' },
   { label: 'GEOLOCATION', status: 'SIMULATED', detail: 'Flat-ground pinhole camera projection WGS84' },
   { label: 'DATABASE', status: 'CONNECTED', detail: 'SQLite operational storage connected' },
-  { label: 'LIVE CAMERA', status: 'NOT CONNECTED', detail: 'No camera device configured — replay mode only' },
+  { label: 'RECONNAISSANCE PIPELINE', status: 'READY', detail: 'Recorded UAV video 4K UHD analysis engine' },
   { label: 'ROUTING SERVICE', status: 'SIMULATED', detail: 'OSRM public demo endpoint (optional, configurable)' },
   { label: 'THERMAL INPUT', status: 'NOT CONNECTED', detail: 'No thermal payload connected' },
 ];

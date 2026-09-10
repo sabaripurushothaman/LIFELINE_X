@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
-import LiveCamera from './pages/LiveCamera';
 import Analysis from './pages/Analysis';
 import Survivors from './pages/Survivors';
 import EvidenceChain from './pages/EvidenceChain';
@@ -16,7 +15,6 @@ const App = () => {
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="camera" element={<LiveCamera />} />
           <Route path="analysis" element={<Analysis />} />
           <Route path="survivors" element={<Survivors />} />
           <Route path="evidence" element={<EvidenceChain />} />
