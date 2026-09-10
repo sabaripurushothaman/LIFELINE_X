@@ -41,13 +41,13 @@ async def list_survivors(analysis_id: str = None, priority: str = None):
 
 
 @router.get("/{track_id}")
-async def get_survivor(track_id: str):
+async def get_survivor(track_id: str, analysis_id: str = None):
     """
     Get a single survivor candidate with full details.
     This powers the 'WHY DID AI FLAG THIS?' feature.
     """
     store = get_store()
-    candidate = store.get_survivor_candidate(track_id)
+    candidate = store.get_survivor_candidate(track_id, analysis_id=analysis_id)
 
     if not candidate:
         raise HTTPException(status_code=404, detail=f"Candidate not found: {track_id}")

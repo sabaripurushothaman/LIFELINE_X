@@ -104,6 +104,21 @@ export interface Analysis {
   candidates?: SurvivorCandidate[];
 }
 
+export interface AnalysisSessionSummary {
+  id: string;
+  incident_id: string;
+  video_filename: string;
+  video_path?: string;
+  status: string;
+  created_at: number;
+  frame_count: number;
+  processed_frames: number;
+  candidate_count: number;
+  critical_count: number;
+  high_count: number;
+  verify_count: number;
+}
+
 export interface MapMarker {
   track_id: string;
   rescue_priority: RescuePriority;

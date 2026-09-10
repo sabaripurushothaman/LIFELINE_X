@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   Upload,
   Play,
@@ -11,21 +11,12 @@ import {
   Compass,
   Cpu,
   MapPin,
+  Plus,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-
-type AnalysisStatus = 'idle' | 'uploading' | 'running' | 'complete' | 'error';
-
-interface AnalysisState {
-  status: AnalysisStatus;
-  analysisId?: string;
-  progress: number;
-  processedFrames: number;
-  totalFrames: number;
-  candidatesFound: number;
-  error?: string;
-}
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
 
 interface VideoMetadata {
   name: string;
@@ -38,21 +29,31 @@ interface VideoMetadata {
 }
 
 const Analysis = () => {
+  const {
+    analyses,
+    currentAnalysisId,
+    currentAnalysis,
+    activeJob,
+    registerNewJob,
+  } = useSession();
+
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoMeta, setVideoMeta] = useState<VideoMetadata | null>(null);
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
   const [incidentId, setIncidentId] = useState('FLOOD-001');
   const [sampleEveryN, setSampleEveryN] = useState(5);
-  const [state, setState] = useState<AnalysisState>({
-    status: 'idle',
-    progress: 0,
-    processedFrames: 0,
-    totalFrames: 0,
-    candidatesFound: 0,
-  });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploadingNew, setIsUploadingNew] = useState<boolean>(false);
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigate = useNavigate();
+
+  const isVideoMissing = !!currentAnalysisId && !currentAnalysis && !activeJob && analyses.length > 0;
+  // If there are no sessions at all, always show the upload form
+  const shouldShowUploadForm =
+    isUploadingNew ||
+    analyses.length === 0 ||
+    (!currentAnalysis && !activeJob && !isVideoMissing);
 
   // Inspect video metadata on file selection
   const handleVideoSelect = (file: File | null) => {
@@ -67,7 +68,6 @@ const Analysis = () => {
       sizeMb: parseFloat((file.size / (1024 * 1024)).toFixed(1)),
     };
 
-    // Load into temporary video element to extract dimensions and duration
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.onloadedmetadata = () => {
@@ -83,7 +83,6 @@ const Analysis = () => {
       });
     };
     video.onerror = () => {
-      // Default fallback
       setVideoMeta({
         ...meta,
         width: 1920,
@@ -96,55 +95,11 @@ const Analysis = () => {
     video.src = URL.createObjectURL(file);
   };
 
-  // Poll for analysis progress
-  useEffect(() => {
-    if (state.status === 'running' && state.analysisId) {
-      pollRef.current = setInterval(async () => {
-        try {
-          const result = (await api.getAnalysis(state.analysisId!)) as {
-            progress: number;
-            processed_frames: number;
-            total_frames: number;
-            candidates_found: number;
-            status: string;
-            error?: string;
-          };
-          setState((prev) => ({
-            ...prev,
-            progress: result.progress ?? prev.progress,
-            processedFrames: result.processed_frames ?? prev.processedFrames,
-            totalFrames: result.total_frames ?? prev.totalFrames,
-            candidatesFound: result.candidates_found ?? prev.candidatesFound,
-            status:
-              result.status === 'COMPLETE'
-                ? 'complete'
-                : result.status === 'ERROR'
-                ? 'error'
-                : 'running',
-            error: result.error,
-          }));
-          if (result.status === 'COMPLETE' || result.status === 'ERROR') {
-            if (pollRef.current) clearInterval(pollRef.current);
-          }
-        } catch {
-          // Keep polling
-        }
-      }, 1000);
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [state.status, state.analysisId]);
-
   const handleStart = async () => {
     if (!videoFile) return;
-    setState({
-      status: 'uploading',
-      progress: 0,
-      processedFrames: 0,
-      totalFrames: 0,
-      candidatesFound: 0,
-    });
+    setIsUploading(true);
+    setUploadError(null);
+
     try {
       const result = await api.startAnalysisWithFiles(
         videoFile,
@@ -152,38 +107,29 @@ const Analysis = () => {
         incidentId,
         sampleEveryN
       );
-      setState((prev) => ({
-        ...prev,
-        status: 'running',
-        analysisId: result.analysis_id,
-        totalFrames: result.frame_count ?? 0,
-      }));
+      registerNewJob(result.analysis_id, result.frame_count ?? 0);
+      setIsUploadingNew(false);
+      setVideoFile(null);
+      setVideoMeta(null);
+      setTelemetryFile(null);
     } catch (e: unknown) {
-      setState((prev) => ({
-        ...prev,
-        status: 'error',
-        error: e instanceof Error ? e.message : String(e),
-      }));
+      setUploadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleReset = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setState({
-      status: 'idle',
-      progress: 0,
-      processedFrames: 0,
-      totalFrames: 0,
-      candidatesFound: 0,
-    });
+  const handleStartNewUpload = () => {
+    setIsUploadingNew(true);
     setVideoFile(null);
     setVideoMeta(null);
     setTelemetryFile(null);
+    setUploadError(null);
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
+      {/* Page Header */}
       <div>
         <div className="flex items-center gap-2.5">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-heading">
@@ -198,9 +144,83 @@ const Analysis = () => {
         </p>
       </div>
 
-      {/* Ingestion & Upload Form State */}
-      {state.status === 'idle' && (
+      {/* Video Session Selector Bar */}
+      {analyses.length > 0 && (
+        <SessionSelector
+          onUploadNew={handleStartNewUpload}
+          showNewButton={!shouldShowUploadForm}
+        />
+      )}
+
+      {/* 1. Uploading / Initializing State */}
+      {isUploading && (
+        <div className="p-8 rounded-2xl bg-white border border-sky-200 shadow-[0_6px_24px_rgba(2,132,199,0.15)] text-center space-y-3 font-mono">
+          <div className="w-10 h-10 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h3 className="font-heading font-black text-lg text-slate-900">
+            UPLOADING RECONNAISSANCE MEDIA &amp; INITIALIZING SESSION…
+          </h3>
+          <p className="text-xs text-slate-500">
+            Registering unique session ID and preparing neural inference pipeline.
+          </p>
+        </div>
+      )}
+
+      {/* 2. Upload Error State */}
+      {uploadError && (
+        <div className="p-6 rounded-2xl bg-red-50 border border-red-200 space-y-3">
+          <div className="flex items-center gap-3 text-red-700">
+            <AlertTriangle className="w-6 h-6" />
+            <h3 className="font-heading font-black text-lg">UPLOAD / INGESTION ERROR</h3>
+          </div>
+          <p className="text-xs sm:text-sm font-mono text-red-800">{uploadError}</p>
+          <button
+            type="button"
+            onClick={() => setUploadError(null)}
+            className="px-5 py-2 rounded-xl bg-white border border-red-300 text-red-800 text-xs font-mono font-bold hover:bg-red-50 transition-colors"
+          >
+            TRY AGAIN
+          </button>
+        </div>
+      )}
+
+      {/* Video No Longer Available State */}
+      {isVideoMissing && (
+        <div className="p-6 sm:p-8 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm space-y-3 font-mono">
+          <div className="flex items-center gap-3 text-amber-800">
+            <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+            <h3 className="font-heading font-black text-lg sm:text-xl">VIDEO NO LONGER AVAILABLE</h3>
+          </div>
+          <p className="text-xs sm:text-sm text-amber-900 leading-relaxed">
+            The referenced video analysis session ({currentAnalysisId}) was deleted or is no longer present in database records.
+          </p>
+          <button
+            type="button"
+            onClick={handleStartNewUpload}
+            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-mono font-bold transition-all shadow-sm"
+          >
+            UPLOAD ANOTHER VIDEO
+          </button>
+        </div>
+      )}
+
+      {/* 3. Ingestion & Upload Form State */}
+      {!isUploading && shouldShowUploadForm && (
         <div className="space-y-5">
+          {analyses.length > 0 && (
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-xs font-mono font-bold text-slate-600">
+                INGEST NEW VIDEO AS INDEPENDENT ANALYSIS SESSION
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsUploadingNew(false)}
+                className="text-xs font-mono font-bold text-sky-700 hover:underline"
+              >
+                ← Return to current session ({currentAnalysis?.video_filename || currentAnalysisId})
+              </button>
+            </div>
+          )}
+
           {/* Upload Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Video File Upload */}
@@ -385,18 +405,18 @@ const Analysis = () => {
         </div>
       )}
 
-      {/* Progressing State */}
-      {(state.status === 'uploading' || state.status === 'running') && (
+      {/* 4. Active Inference Progressing State */}
+      {!isUploading && !shouldShowUploadForm && activeJob && activeJob.status === 'running' && (
         <div className="p-6 sm:p-8 rounded-2xl bg-white border border-sky-200 shadow-[0_6px_24px_rgba(2,132,199,0.15)] space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <Zap className="w-7 h-7 text-sky-600 animate-pulse" />
               <div>
                 <h3 className="font-heading font-black text-xl text-slate-900">
-                  {state.status === 'uploading' ? 'UPLOADING RECONNAISSANCE MEDIA…' : 'AI INFERENCE IN PROGRESS'}
+                  AI INFERENCE IN PROGRESS
                 </h3>
                 <p className="text-xs font-mono text-slate-500 mt-0.5">
-                  ANALYSIS ID: <strong className="text-sky-700">{state.analysisId ?? 'INITIALIZING…'}</strong>
+                  ANALYSIS ID: <strong className="text-sky-700">{activeJob.analysisId}</strong>
                 </p>
               </div>
             </div>
@@ -406,16 +426,16 @@ const Analysis = () => {
             </span>
           </div>
 
-          {/* Laser Progress Bar */}
+          {/* Progress Bar */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs sm:text-sm font-mono">
               <span className="text-slate-600 font-semibold">PIPELINE EXECUTION PROGRESS</span>
-              <span className="text-sky-700 font-black text-base">{state.progress}%</span>
+              <span className="text-sky-700 font-black text-base">{activeJob.progress}%</span>
             </div>
             <div className="relative w-full h-3.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
               <div
                 className="h-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${state.progress}%` }}
+                style={{ width: `${activeJob.progress}%` }}
               />
             </div>
           </div>
@@ -423,20 +443,20 @@ const Analysis = () => {
           {/* Key Metric Counters */}
           <div className="grid grid-cols-3 gap-4 text-center font-mono">
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-3xl font-black text-sky-700">{state.progress}%</div>
+              <div className="text-3xl font-black text-sky-700">{activeJob.progress}%</div>
               <div className="text-xs text-slate-500 mt-1 uppercase">PROGRESS</div>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-3xl font-black text-slate-900">{state.processedFrames}</div>
+              <div className="text-3xl font-black text-slate-900">{activeJob.processedFrames}</div>
               <div className="text-xs text-slate-500 mt-1 uppercase">FRAMES PROCESSED</div>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-3xl font-black text-emerald-700">{state.candidatesFound}</div>
+              <div className="text-3xl font-black text-emerald-700">{activeJob.candidatesFound}</div>
               <div className="text-xs text-slate-500 mt-1 uppercase">HUMAN CANDIDATES</div>
             </div>
           </div>
 
-          {/* Dynamic Active Pipeline Stages Status */}
+          {/* Dynamic Pipeline Stages */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs font-mono">
             <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">
               <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
@@ -458,33 +478,58 @@ const Analysis = () => {
         </div>
       )}
 
-      {/* Completed State */}
-      {state.status === 'complete' && (
+      {/* 5. Completed Analysis Dossier State */}
+      {!isUploading && !shouldShowUploadForm && currentAnalysis && currentAnalysis.status === 'COMPLETE' && (
         <div className="p-6 sm:p-8 rounded-2xl bg-white border border-emerald-200 shadow-[0_6px_24px_rgba(22,163,74,0.15)] space-y-6">
-          <div className="flex items-center gap-3.5">
-            <CheckCircle2 className="w-9 h-9 text-emerald-600" />
-            <div>
-              <h3 className="font-heading font-black text-2xl text-emerald-800">
-                MISSION ANALYSIS COMPLETE
-              </h3>
-              <p className="text-xs font-mono text-slate-500 mt-0.5">
-                DOSSIER READY • ANALYSIS ID: {state.analysisId}
-              </p>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3.5">
+              <CheckCircle2 className="w-9 h-9 text-emerald-600 flex-shrink-0" />
+              <div>
+                <h3 className="font-heading font-black text-2xl text-emerald-800">
+                  ANALYSIS COMPLETE FOR THIS VIDEO
+                </h3>
+                <p className="text-xs font-mono text-slate-500 mt-0.5">
+                  FILE: <strong className="text-slate-800">{currentAnalysis.video_filename || currentAnalysis.id}</strong> • SESSION: <strong className="text-sky-700">{currentAnalysis.id}</strong>
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleStartNewUpload}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-heading font-bold text-xs tracking-wider transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>UPLOAD ANOTHER VIDEO</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center font-mono">
             <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200">
-              <div className="text-3xl sm:text-4xl font-black text-emerald-700">{state.candidatesFound}</div>
-              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">HUMAN CANDIDATES FLAGGED</div>
+              <div className="text-3xl sm:text-4xl font-black text-emerald-700">
+                {currentAnalysis.candidate_count ?? 0}
+              </div>
+              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">
+                HUMAN CANDIDATES FLAGGED
+              </div>
             </div>
+
             <div className="p-5 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-3xl sm:text-4xl font-black text-slate-900">{state.processedFrames}</div>
-              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">FRAMES ANALYZED</div>
+              <div className="text-3xl sm:text-4xl font-black text-slate-900">
+                {currentAnalysis.processed_frames || currentAnalysis.frame_count || 0}
+              </div>
+              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">
+                FRAMES ANALYZED
+              </div>
             </div>
+
             <div className="p-5 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-3xl sm:text-4xl font-black text-sky-700">100%</div>
-              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">PIPELINE COMPLETE</div>
+              <div className="text-3xl sm:text-4xl font-black text-sky-700">
+                100%
+              </div>
+              <div className="text-xs text-slate-600 mt-1 uppercase font-bold">
+                PIPELINE STATUS
+              </div>
             </div>
           </div>
 
@@ -495,7 +540,7 @@ const Analysis = () => {
               className="flex-1 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-heading font-black text-sm tracking-wider flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(22,163,74,0.35)] transition-all"
             >
               <Users className="w-5 h-5" />
-              <span>REVIEW SURVIVOR CANDIDATES</span>
+              <span>REVIEW SURVIVOR CANDIDATES FOR THIS VIDEO</span>
             </button>
             <button
               type="button"
@@ -505,31 +550,26 @@ const Analysis = () => {
               <MapPin className="w-5 h-5" />
               <span>VIEW LOCATIONS ON MAP</span>
             </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="py-4 px-6 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-heading font-bold text-sm tracking-wider transition-all"
-            >
-              NEW INGESTION
-            </button>
           </div>
         </div>
       )}
 
-      {/* Error State */}
-      {state.status === 'error' && (
+      {/* 6. Pipeline Error State */}
+      {!isUploading && !shouldShowUploadForm && currentAnalysis && currentAnalysis.status === 'ERROR' && (
         <div className="p-6 rounded-2xl bg-red-50 border border-red-200 space-y-4">
           <div className="flex items-center gap-3 text-red-700">
             <AlertTriangle className="w-6 h-6" />
             <h3 className="font-heading font-black text-lg">ANALYSIS EXECUTION ERROR</h3>
           </div>
-          <p className="text-xs sm:text-sm font-mono text-red-800">{state.error ?? 'Unknown error occurred during processing.'}</p>
+          <p className="text-xs sm:text-sm font-mono text-red-800">
+            Analysis session {currentAnalysis.id} failed during execution.
+          </p>
           <button
             type="button"
-            onClick={handleReset}
+            onClick={handleStartNewUpload}
             className="px-5 py-2.5 rounded-xl bg-white border border-red-300 text-red-800 text-xs font-mono font-bold hover:bg-red-50 transition-colors"
           >
-            TRY AGAIN
+            UPLOAD / RETRY INGESTION
           </button>
         </div>
       )}

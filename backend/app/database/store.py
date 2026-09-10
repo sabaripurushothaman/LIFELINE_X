@@ -99,7 +99,7 @@ def _init_schema(conn: sqlite3.Connection):
         CREATE TABLE IF NOT EXISTS survivor_candidates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             analysis_id TEXT,
-            track_id TEXT UNIQUE,
+            track_id TEXT,
             survivor_confidence REAL,
             rescue_priority TEXT,
             priority_reason TEXT,
@@ -116,7 +116,8 @@ def _init_schema(conn: sqlite3.Connection):
             human_review_status TEXT DEFAULT 'PENDING',
             human_decision TEXT,
             reviewed_at REAL,
-            created_at REAL
+            created_at REAL,
+            UNIQUE(analysis_id, track_id)
         );
 
         CREATE TABLE IF NOT EXISTS reviews (
@@ -237,9 +238,15 @@ class DataStore:
     def list_analyses(self) -> List[dict]:
         if self._conn:
             with _lock:
-                rows = self._conn.execute(
-                    "SELECT * FROM analyses ORDER BY created_at DESC"
-                ).fetchall()
+                q = """
+                SELECT a.*,
+                       (SELECT COUNT(*) FROM survivor_candidates sc WHERE sc.analysis_id = a.id AND sc.track_id NOT LIKE 'AN-%') as candidate_count,
+                       (SELECT COUNT(*) FROM survivor_candidates sc WHERE sc.analysis_id = a.id AND sc.rescue_priority = 'CRITICAL' AND sc.track_id NOT LIKE 'AN-%') as critical_count,
+                       (SELECT COUNT(*) FROM survivor_candidates sc WHERE sc.analysis_id = a.id AND sc.rescue_priority = 'HIGH' AND sc.track_id NOT LIKE 'AN-%') as high_count,
+                       (SELECT COUNT(*) FROM survivor_candidates sc WHERE sc.analysis_id = a.id AND sc.rescue_priority = 'VERIFY' AND sc.track_id NOT LIKE 'AN-%') as verify_count
+                FROM analyses a ORDER BY a.created_at DESC
+                """
+                rows = self._conn.execute(q).fetchall()
                 return [dict(r) for r in rows]
         else:
             return list(self._mem["analyses"].values())
@@ -414,12 +421,19 @@ class DataStore:
         else:
             return list(self._mem["candidates"].values())
 
-    def get_survivor_candidate(self, track_id: str) -> Optional[dict]:
+    def get_survivor_candidate(self, track_id: str, analysis_id: Optional[str] = None) -> Optional[dict]:
         if self._conn:
             with _lock:
-                row = self._conn.execute(
-                    "SELECT * FROM survivor_candidates WHERE track_id=?", (track_id,)
-                ).fetchone()
+                if analysis_id:
+                    row = self._conn.execute(
+                        "SELECT * FROM survivor_candidates WHERE track_id=? AND analysis_id=?",
+                        (track_id, analysis_id),
+                    ).fetchone()
+                else:
+                    row = self._conn.execute(
+                        "SELECT * FROM survivor_candidates WHERE track_id=? ORDER BY created_at DESC",
+                        (track_id,),
+                    ).fetchone()
                 if not row:
                     return None
                 d = dict(row)

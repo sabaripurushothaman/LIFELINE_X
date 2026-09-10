@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { EvidenceChain, SurvivorCandidate, RescuePriority } from '../types';
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
 
 const SOURCE_CONFIG: Record<string, { label: string; icon: React.ElementType }> = {
   RGB_DETECTION: { label: 'RGB Person Detection', icon: Camera },
@@ -36,8 +38,8 @@ const QUALITY_CONFIG: Record<string, { color: string; bg: string; border: string
 
 const PRIORITY_BADGES: Record<RescuePriority, { label: string; style: string }> = {
   CRITICAL: { label: 'CRITICAL', style: 'bg-red-50 text-red-700 border-red-300' },
-  HIGH:     { label: 'HIGH',     style: 'bg-amber-50 text-amber-700 border-amber-300' },
-  VERIFY:   { label: 'VERIFY',   style: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
+  HIGH: { label: 'HIGH', style: 'bg-amber-50 text-amber-700 border-amber-300' },
+  VERIFY: { label: 'VERIFY', style: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
 };
 
 // Fallback demo candidates
@@ -332,7 +334,7 @@ const CandidateEvidenceCard = ({ candidate, isInitiallyExpanded = false }: Candi
                   return (
                     <div key={idx} className="relative group">
                       {/* Animated connector node */}
-                      <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-white border-2 border-sky-400 flex items-center justify-center shadow-sm">
+                      <div className="absolute -left-7.75 sm:-left-9.75 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-[#7DACE4] flex items-center justify-center shadow-sm">
                         <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                       </div>
 
@@ -394,40 +396,60 @@ const CandidateEvidenceCard = ({ candidate, isInitiallyExpanded = false }: Candi
 };
 
 const EvidenceChainPage = () => {
+  const { currentAnalysisId, currentAnalysis, analyses } = useSession();
   const [candidates, setCandidates] = useState<SurvivorCandidate[]>([]);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const result = (await api.getSurvivors()) as { candidates: SurvivorCandidate[] };
-        if (result.candidates && result.candidates.length > 0) {
-          setCandidates(result.candidates);
+        if (currentAnalysisId) {
+          const result = (await api.getSurvivors(currentAnalysisId)) as { candidates: SurvivorCandidate[] };
+          setCandidates(result.candidates ?? []);
+          setIsDemo(false);
+        } else if (analyses.length > 0) {
+          const result = (await api.getSurvivors(analyses[0].id)) as { candidates: SurvivorCandidate[] };
+          setCandidates(result.candidates ?? []);
+          setIsDemo(false);
         } else {
           setCandidates(DEMO_CANDIDATES);
+          setIsDemo(true);
         }
       } catch {
         setCandidates(DEMO_CANDIDATES);
+        setIsDemo(true);
       }
     };
     load();
-  }, []);
+  }, [currentAnalysisId, analyses.length]);
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-heading">
-            EVIDENCE CHAIN INVESTIGATION
-          </h1>
-          <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-sky-50 border border-sky-200 text-sky-700">
-            PROVENANCE TRACE
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-heading">
+              EVIDENCE CHAIN INVESTIGATION
+            </h1>
+            <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-sky-50 border border-sky-200 text-sky-700">
+              PROVENANCE TRACE
+            </span>
+          </div>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+            Multi-modal evidence provenance breakdown for every survivor candidate. Transparent AI decision audit trail.
+          </p>
         </div>
-        <p className="text-slate-500 text-xs sm:text-sm mt-1">
-          Multi-modal evidence provenance breakdown for every survivor candidate. Transparent AI decision audit trail.
-        </p>
+        <span className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${isDemo
+          ? 'bg-amber-50 border-amber-200 text-amber-700'
+          : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+          }`}>
+          {isDemo ? 'DEMO REPLAY' : `SESSION: ${currentAnalysis?.video_filename || currentAnalysisId}`}
+        </span>
       </div>
+
+      {/* Video Session Selector */}
+      {analyses.length > 0 && <SessionSelector />}
 
       {/* Global Pipeline Schematic Banner */}
       <div className="p-4 rounded-xl bg-sky-50 border border-sky-200">
@@ -453,15 +475,26 @@ const EvidenceChainPage = () => {
       </div>
 
       {/* Candidate Dossier Cards List */}
-      <div className="space-y-4">
-        {candidates.map((candidate, idx) => (
-          <CandidateEvidenceCard
-            key={candidate.track_id}
-            candidate={candidate}
-            isInitiallyExpanded={idx === 0 || candidate.track_id === 'LX-031'}
-          />
-        ))}
-      </div>
+      {candidates.length === 0 ? (
+        <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 font-mono space-y-2">
+          <div className="text-slate-400 text-sm font-bold uppercase tracking-wider">
+            NO EVIDENCE CHAINS FOR THIS VIDEO SESSION
+          </div>
+          <p className="text-xs text-slate-500">
+            Session: {currentAnalysis?.video_filename || currentAnalysisId} • 0 candidates flagged.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {candidates.map((candidate, idx) => (
+            <CandidateEvidenceCard
+              key={`${candidate.analysis_id || currentAnalysisId}-${candidate.track_id}`}
+              candidate={candidate}
+              isInitiallyExpanded={idx === 0 || candidate.track_id === 'LX-031'}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

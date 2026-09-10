@@ -160,6 +160,7 @@ async def start_analysis_with_telemetry(
         incident_id=incident_id,
         telemetry_bytes=telemetry_bytes,
         sample_every_n=sample_every_n,
+        original_filename=video.filename,
     )
 
     background_tasks.add_task(_run_analysis_task, analysis_id)

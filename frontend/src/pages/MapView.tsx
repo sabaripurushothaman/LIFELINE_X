@@ -12,9 +12,12 @@ import {
   AlertCircle,
   Shield,
   CheckCircle2,
+  Laptop,
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { SurvivorCandidate, RescuePriority } from '../types';
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
 
 const PRIORITY_COLORS: Record<RescuePriority, string> = {
   CRITICAL: '#ef4444',
@@ -101,9 +104,16 @@ interface RouteResult {
   safety_note?: string;
 }
 
+interface LaptopLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: number;
+}
+
 const MapView = () => {
+  const { currentAnalysisId, analyses } = useSession();
   const [candidates, setCandidates] = useState<SurvivorCandidate[]>([]);
-  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('');
   const [exporting, setExporting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'VERIFY'>('ALL');
   const [selectedMarker, setSelectedMarker] = useState<SurvivorCandidate | null>(null);
@@ -122,52 +132,45 @@ const MapView = () => {
   const [showSearchSwath, setShowSearchSwath] = useState(true);
   const [showUncertaintyRings, setShowUncertaintyRings] = useState(true);
 
+  // Laptop Geolocation State (Real Browser Device Location)
+  const [laptopLocation, setLaptopLocation] = useState<LaptopLocation | null>(null);
+  const [laptopLocating, setLaptopLocating] = useState<boolean>(false);
+  const [laptopStatusMessage, setLaptopStatusMessage] = useState<string | null>(null);
+  const [laptopStatusType, setLaptopStatusType] = useState<'info' | 'error' | 'success' | null>(null);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const responderMarkerRef = useRef<any>(null);
-
-  // Load analyses list
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = (await api.listAnalyses()) as {
-          analyses: Array<{ id: string; incident_id: string }>;
-        };
-        const list = result.analyses ?? [];
-        if (list.length > 0) setSelectedAnalysisId(list[0].id);
-      } catch {
-        // Backend offline — fallback
-      }
-    };
-    load();
-  }, []);
+  const laptopMarkerRef = useRef<any>(null);
+  const laptopLocationRef = useRef<LaptopLocation | null>(null);
+  const laptopWatchIdRef = useRef<number | null>(null);
+  const hasUserInteractedRef = useRef<boolean>(false);
 
   // Load map data
   useEffect(() => {
     const load = async () => {
+      const activeId = currentAnalysisId || (analyses.length > 0 ? analyses[0].id : '');
       try {
-        if (selectedAnalysisId) {
-          const result = await api.getMapData(selectedAnalysisId);
+        if (activeId) {
+          const result = await api.getMapData(activeId);
           const markers = (result as { markers: SurvivorCandidate[] }).markers ?? [];
           if (markers.length > 0) {
             setCandidates(markers);
             return;
           }
-        }
-        const survivorResult = await api.getSurvivors(selectedAnalysisId);
-        const list = (survivorResult as { candidates: SurvivorCandidate[] }).candidates ?? [];
-        if (list.length > 0) {
+          const survivorResult = await api.getSurvivors(activeId);
+          const list = (survivorResult as { candidates: SurvivorCandidate[] }).candidates ?? [];
           setCandidates(list);
-        } else {
-          setCandidates(DEMO_MAP_CANDIDATES);
+          return;
         }
+        setCandidates(DEMO_MAP_CANDIDATES);
       } catch {
         setCandidates(DEMO_MAP_CANDIDATES);
       }
     };
     load();
-  }, [selectedAnalysisId]);
+  }, [currentAnalysisId, analyses.length]);
 
   const geoLocated = candidates.filter((c) => c.latitude && c.longitude);
   const displayMarkers =
@@ -175,10 +178,13 @@ const MapView = () => {
       ? geoLocated
       : geoLocated.filter((c) => c.rescue_priority === activeFilter);
 
+  const isRealSession = !!currentAnalysisId || analyses.length > 0;
+  const hasGpsData = geoLocated.length > 0;
+
   // Initialize MapLibre
   useEffect(() => {
     if (!mapRef.current) return;
-    const targetCandidates = displayMarkers.length > 0 ? displayMarkers : DEMO_MAP_CANDIDATES;
+    const targetCandidates = isRealSession ? displayMarkers : DEMO_MAP_CANDIDATES;
 
     const initMap = async () => {
       try {
@@ -189,8 +195,8 @@ const MapView = () => {
         }
 
         const center: [number, number] =
-          targetCandidates.length > 0
-            ? [targetCandidates[0].longitude!, targetCandidates[0].latitude!]
+          targetCandidates.length > 0 && targetCandidates[0].longitude && targetCandidates[0].latitude
+            ? [targetCandidates[0].longitude, targetCandidates[0].latitude]
             : [80.1643, 13.0421];
 
         const map = new maplibregl.Map({
@@ -351,6 +357,24 @@ const MapView = () => {
 
           // 5. Add Responder Start Pin if set
           updateResponderPin(map, maplibregl);
+
+          // 6. Add Laptop Marker if location is already known
+          if (laptopLocationRef.current) {
+            updateLaptopMarker(
+              map,
+              maplibregl,
+              laptopLocationRef.current.latitude,
+              laptopLocationRef.current.longitude,
+              laptopLocationRef.current.accuracy
+            );
+          }
+        });
+
+        // Track user map interaction to avoid forced recentering while exploring
+        map.on('movestart', (e: any) => {
+          if (e.originalEvent) {
+            hasUserInteractedRef.current = true;
+          }
         });
 
         // Click-to-pick responder location on map
@@ -371,12 +395,357 @@ const MapView = () => {
     initMap();
 
     return () => {
+      if (laptopMarkerRef.current) {
+        laptopMarkerRef.current.remove();
+        laptopMarkerRef.current = null;
+      }
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
       }
     };
   }, [displayMarkers]);
+
+  // Helper to generate GeoJSON polygon for accuracy circle
+  const createAccuracyCircleGeoJSON = (lng: number, lat: number, radiusMeters: number, points = 48) => {
+    const dLat = (radiusMeters / 6378137) * (180 / Math.PI);
+    const dLng = (radiusMeters / (6378137 * Math.cos((lat * Math.PI) / 180))) * (180 / Math.PI);
+    const coords: [number, number][] = [];
+    for (let i = 0; i <= points; i++) {
+      const theta = (i / points) * (2 * Math.PI);
+      coords.push([lng + dLng * Math.cos(theta), lat + dLat * Math.sin(theta)]);
+    }
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [coords],
+      },
+      properties: { radius: radiusMeters },
+    };
+  };
+
+  // Update or render Laptop location marker and accuracy circle on MapLibre map
+  const updateLaptopMarker = async (map: any, maplibregl: any, lat: number, lon: number, accuracy: number) => {
+    if (!map || isNaN(lat) || isNaN(lon)) return;
+
+    // 1. Update or create accuracy circle source & layers
+    const sourceId = 'laptop-accuracy-circle';
+    const circleData = createAccuracyCircleGeoJSON(lon, lat, Math.max(accuracy, 8));
+
+    try {
+      if (map.getSource(sourceId)) {
+        map.getSource(sourceId).setData(circleData);
+      } else {
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: circleData,
+        });
+
+        map.addLayer({
+          id: 'laptop-accuracy-fill',
+          type: 'fill',
+          source: sourceId,
+          paint: {
+            'fill-color': '#8971D0',
+            'fill-opacity': 0.15,
+          },
+        });
+
+        map.addLayer({
+          id: 'laptop-accuracy-stroke',
+          type: 'line',
+          source: sourceId,
+          paint: {
+            'line-color': '#8971D0',
+            'line-width': 1.5,
+            'line-dasharray': [3, 2],
+            'line-opacity': 0.8,
+          },
+        });
+      }
+    } catch {
+      // Ignore source layer duplication if any
+    }
+
+    const popupHtml = `
+      <div style="font-family: monospace; padding: 6px 8px; font-size: 11px; color: #0f172a; min-width: 190px;">
+        <div style="display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 12px; color: #6c52b8; margin-bottom: 6px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px;">
+          <span>💻 LAPTOP LOCATION</span>
+        </div>
+        <div style="line-height: 1.6;">
+          <div><span style="color: #64748b;">Latitude:</span> <strong>${lat.toFixed(6)}°</strong></div>
+          <div><span style="color: #64748b;">Longitude:</span> <strong>${lon.toFixed(6)}°</strong></div>
+          <div style="color: #6c52b8; font-weight: 700;"><span style="color: #64748b;">Accuracy:</span> ±${Math.round(accuracy)} meters</div>
+        </div>
+        <div style="margin-top: 6px; font-size: 9px; color: #64748b; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+          Live Browser Geolocation API
+        </div>
+      </div>
+    `;
+
+    // 2. If marker already exists, update position & popup
+    if (laptopMarkerRef.current) {
+      laptopMarkerRef.current.setLngLat([lon, lat]);
+      const existingPopup = laptopMarkerRef.current.getPopup();
+      if (existingPopup) {
+        existingPopup.setHTML(popupHtml);
+      }
+      return;
+    }
+
+    // 3. Create distinct Laptop marker element
+    const el = document.createElement('div');
+    el.className = 'laptop-location-marker group cursor-pointer';
+    el.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    `;
+    el.innerHTML = `
+      <div style="
+        position: relative;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #8971D0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 16px rgba(137, 113, 208, 0.65), 0 4px 12px rgba(15, 23, 42, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      ">
+        <div style="
+          position: absolute;
+          inset: -6px;
+          border-radius: 50%;
+          border: 2px solid #8971D0;
+          opacity: 0.5;
+          animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        "></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6c52b8" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+          <line x1="2" y1="20" x2="22" y2="20"></line>
+        </svg>
+      </div>
+      <div style="
+        margin-top: 4px;
+        background: #1e1b4b;
+        color: #ADF7D1;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #8971D0;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      ">
+        LAPTOP LOCATION
+      </div>
+    `;
+
+    const popup = new maplibregl.Popup({ offset: 25, closeButton: true, closeOnClick: false })
+      .setHTML(popupHtml);
+
+    const marker = new maplibregl.Marker({ element: el })
+      .setLngLat([lon, lat])
+      .setPopup(popup)
+      .addTo(map);
+
+    laptopMarkerRef.current = marker;
+  };
+
+  // Continuous live location watcher setup
+  const startLocationWatcher = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    if (laptopWatchIdRef.current !== null) return;
+
+    try {
+      laptopWatchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy;
+          const updated = {
+            latitude: lat,
+            longitude: lon,
+            accuracy,
+            timestamp: pos.timestamp,
+          };
+          laptopLocationRef.current = updated;
+          setLaptopLocation(updated);
+
+          if (mapInstance.current) {
+            import('maplibre-gl').then((maplibregl) => {
+              updateLaptopMarker(mapInstance.current, maplibregl, lat, lon, accuracy);
+            });
+            // DO NOT continuously force map center during live updates to avoid hijacking user control
+          }
+        },
+        () => {
+          // Silent background watcher error handling
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 25000,
+          maximumAge: 10000,
+        }
+      );
+    } catch {
+      // Ignore watcher exception
+    }
+  };
+
+  // Request & center map on laptop location
+  const handleLocateLaptop = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLaptopStatusMessage('Geolocation is not supported by this browser.');
+      setLaptopStatusType('error');
+      return;
+    }
+
+    const isLocal =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '::1';
+    if (!window.isSecureContext && !isLocal) {
+      setLaptopStatusMessage('Location requires browser permission and a secure context (HTTPS or localhost).');
+      setLaptopStatusType('error');
+      return;
+    }
+
+    setLaptopLocating(true);
+    setLaptopStatusMessage(null);
+
+    // If position already known, center immediately
+    if (laptopLocationRef.current && mapInstance.current) {
+      mapInstance.current.flyTo({
+        center: [laptopLocationRef.current.longitude, laptopLocationRef.current.latitude],
+        zoom: 15.5,
+        speed: 1.2,
+      });
+      if (laptopMarkerRef.current) {
+        laptopMarkerRef.current.togglePopup();
+      }
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy;
+        const loc = {
+          latitude: lat,
+          longitude: lon,
+          accuracy,
+          timestamp: pos.timestamp,
+        };
+        laptopLocationRef.current = loc;
+        setLaptopLocation(loc);
+        setLaptopLocating(false);
+        setLaptopStatusMessage(`Laptop located within ±${Math.round(accuracy)}m.`);
+        setLaptopStatusType('success');
+
+        if (mapInstance.current) {
+          import('maplibre-gl').then((maplibregl) => {
+            updateLaptopMarker(mapInstance.current, maplibregl, lat, lon, accuracy);
+            mapInstance.current.flyTo({
+              center: [lon, lat],
+              zoom: 15.5,
+              speed: 1.2,
+            });
+            if (laptopMarkerRef.current) {
+              laptopMarkerRef.current.togglePopup();
+            }
+          });
+        }
+
+        startLocationWatcher();
+      },
+      (error) => {
+        setLaptopLocating(false);
+        let msg = 'Laptop location unavailable.';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            msg = 'Location permission denied.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            msg = 'Laptop location unavailable.';
+            break;
+          case error.TIMEOUT:
+            msg = 'Unable to obtain laptop location. Please try again.';
+            break;
+          default:
+            msg = 'Laptop location unavailable.';
+            break;
+        }
+        setLaptopStatusMessage(msg);
+        setLaptopStatusType('error');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 5000,
+      }
+    );
+  };
+
+  // Check browser geolocation on initial mount if already granted
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((result) => {
+          if (result.state === 'granted') {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const accuracy = pos.coords.accuracy;
+                const loc = {
+                  latitude: lat,
+                  longitude: lon,
+                  accuracy,
+                  timestamp: pos.timestamp,
+                };
+                laptopLocationRef.current = loc;
+                setLaptopLocation(loc);
+
+                if (mapInstance.current) {
+                  import('maplibre-gl').then((maplibregl) => {
+                    updateLaptopMarker(mapInstance.current, maplibregl, lat, lon, accuracy);
+                    if (!hasUserInteractedRef.current) {
+                      mapInstance.current.flyTo({ center: [lon, lat], zoom: 14.8 });
+                    }
+                  });
+                }
+                startLocationWatcher();
+              },
+              () => {},
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Clean up geolocation watcher on unmount
+  useEffect(() => {
+    return () => {
+      if (laptopWatchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(laptopWatchIdRef.current);
+        laptopWatchIdRef.current = null;
+      }
+    };
+  }, []);
 
   // Update responder marker on map
   const updateResponderPin = async (map: any, maplibregl: any) => {
@@ -478,10 +847,11 @@ const MapView = () => {
   }, [showDronePath, showSearchSwath]);
 
   const handleExport = async (format: 'geojson' | 'csv' | 'json') => {
-    if (!selectedAnalysisId) return;
+    const activeId = currentAnalysisId || (analyses.length > 0 ? analyses[0].id : '');
+    if (!activeId) return;
     setExporting(true);
     try {
-      await api.exportAnalysis(selectedAnalysisId, format);
+      await api.exportAnalysis(activeId, format);
     } catch (e: unknown) {
       alert(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -538,6 +908,28 @@ const MapView = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="button"
+            onClick={handleLocateLaptop}
+            disabled={laptopLocating}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-bold transition-all border shadow-sm ${
+              laptopLocation
+                ? 'bg-purple-50 border-purple-300 text-purple-800 hover:bg-purple-100'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+            title="Locate laptop using standard browser Geolocation API"
+          >
+            {laptopLocating ? (
+              <span className="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
+            ) : (
+              <Laptop className="w-4 h-4 text-purple-600" />
+            )}
+            <span>{laptopLocating ? 'LOCATING…' : 'LOCATE LAPTOP'}</span>
+            {laptopLocation && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowRoutingPanel((p) => !p)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-bold transition-all border ${
               showRoutingPanel
@@ -569,6 +961,9 @@ const MapView = () => {
         </div>
       </div>
 
+      {/* Video Session Selector Bar */}
+      {analyses.length > 0 && <SessionSelector />}
+
       {/* Emergency Routing Planner Panel */}
       {showRoutingPanel && (
         <div className="bg-white rounded-2xl border border-red-200 shadow-[0_6px_24px_rgba(220,38,38,0.12)] overflow-hidden">
@@ -596,15 +991,31 @@ const MapView = () => {
                     <Navigation className="w-3.5 h-3.5 text-sky-600" />
                     RESPONDER START LOCATION
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsPickingLocation(!isPickingLocation)}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
-                      isPickingLocation ? 'bg-sky-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {isPickingLocation ? 'CLICK MAP NOW' : 'PICK ON MAP'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {laptopLocation && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResponderLat(laptopLocation.latitude.toFixed(5));
+                          setResponderLon(laptopLocation.longitude.toFixed(5));
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-200 transition-all flex items-center gap-1"
+                        title="Use actual laptop coordinates as responder starting position"
+                      >
+                        <Laptop className="w-3 h-3" />
+                        USE LAPTOP
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsPickingLocation(!isPickingLocation)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all ${
+                        isPickingLocation ? 'bg-sky-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {isPickingLocation ? 'CLICK MAP NOW' : 'PICK ON MAP'}
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -764,9 +1175,49 @@ const MapView = () => {
         </div>
       </div>
 
+      {/* Laptop Geolocation Status Banner */}
+      {laptopStatusMessage && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all shadow-sm ${
+            laptopStatusType === 'error'
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              : 'bg-purple-50 border-purple-200 text-purple-900'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {laptopStatusType === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+            )}
+            <span className="font-semibold">{laptopStatusMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLaptopStatusMessage(null)}
+            className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Main Map Canvas */}
       <div className="relative rounded-2xl overflow-hidden border border-slate-300 shadow-[0_8px_32px_rgba(15,23,42,0.15)] bg-slate-900">
         <div ref={mapRef} className="w-full h-[580px]" />
+
+        {/* Real Mode No GPS Banner */}
+        {isRealSession && !hasGpsData && (
+          <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md border border-amber-400/60 rounded-xl p-4 text-xs font-mono text-white shadow-xl flex items-center gap-3 max-w-md">
+            <AlertTriangle className="w-6 h-6 text-amber-400 flex-shrink-0" />
+            <div>
+              <div className="font-bold text-amber-300 text-sm">NO GPS DATA IN THIS VIDEO</div>
+              <div className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                Flight telemetry CSV was not attached for session {currentAnalysisId}. Ground coordinates cannot be fabricated.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* HUD Map Legend & Mission Status */}
         <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md border border-slate-200 rounded-xl p-3.5 text-xs font-mono text-slate-700 space-y-2 shadow-lg max-w-xs">
@@ -796,6 +1247,15 @@ const MapView = () => {
               <span className="w-3 h-2 bg-emerald-200 border border-emerald-400" />
               <span>SEARCH COVERAGE SWATH</span>
             </div>
+            {laptopLocation && (
+              <div className="flex items-center justify-between text-purple-700 font-bold pt-1 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600 shadow-sm" />
+                  <span>LAPTOP LOCATION</span>
+                </div>
+                <span className="text-[10px] text-purple-600 font-mono">±{Math.round(laptopLocation.accuracy)}m</span>
+              </div>
+            )}
           </div>
 
           {routeResult?.status === 'ROUTE_FOUND' && (

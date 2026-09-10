@@ -61,8 +61,8 @@ export const api = {
   getSurvivors: (analysisId?: string) =>
     apiFetch(`/api/survivors${analysisId ? `?analysis_id=${analysisId}` : ''}`),
 
-  getSurvivor: (trackId: string) =>
-    apiFetch(`/api/survivors/${trackId}`),
+  getSurvivor: (trackId: string, analysisId?: string) =>
+    apiFetch(`/api/survivors/${trackId}${analysisId ? `?analysis_id=${analysisId}` : ''}`),
 
   // ─── Evidence ──────────────────────────────────────────────────────────────
 
