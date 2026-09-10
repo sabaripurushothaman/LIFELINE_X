@@ -55,14 +55,17 @@ const STATUS_THEMES: Record<
 };
 
 const DEFAULT_COMPONENTS: SystemComponent[] = [
+  { label: 'API', status: 'CONNECTED', detail: 'FastAPI backend running' },
   { label: 'VIDEO INGESTION', status: 'READY', detail: 'OpenCV multi-format decoder initialized' },
-  { label: 'AI DETECTION', status: 'READY', detail: 'YOLOv8-Small deep learning model loaded' },
+  { label: 'AI DETECTION', status: 'READY', detail: 'YOLOv8n on CPU (CUDA not detected)' },
   { label: 'OBJECT TRACKING', status: 'READY', detail: 'ByteTrack Kalman association engine ready' },
-  { label: 'TELEMETRY SYNC', status: 'READY', detail: 'Timestamp correlation engine synchronized' },
-  { label: 'EVIDENCE ENGINE', status: 'READY', detail: 'Multi-modal confidence fuser ready' },
+  { label: 'TELEMETRY SYNC', status: 'READY', detail: 'CSV timestamp correlation ready' },
+  { label: 'EVIDENCE ENGINE', status: 'READY', detail: 'Multi-signal evidence chain engine ready' },
   { label: 'GEOLOCATION', status: 'SIMULATED', detail: 'Flat-ground pinhole camera projection WGS84' },
   { label: 'DATABASE', status: 'CONNECTED', detail: 'SQLite operational storage connected' },
-  { label: 'OFFLINE QUEUE', status: 'READY', detail: 'Local caching standby for low-connectivity' },
+  { label: 'LIVE CAMERA', status: 'NOT CONNECTED', detail: 'No camera device configured — replay mode only' },
+  { label: 'ROUTING SERVICE', status: 'SIMULATED', detail: 'OSRM public demo endpoint (optional, configurable)' },
+  { label: 'THERMAL INPUT', status: 'NOT CONNECTED', detail: 'No thermal payload connected' },
 ];
 
 const SystemHealthPage = () => {
@@ -129,38 +132,40 @@ const SystemHealthPage = () => {
         </div>
       )}
 
-      {/* Mission Diagnostics KPI Grid (GPU, CPU, Memory, FPS, Latency) */}
+      {/* Mission Diagnostics KPI Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.07)]">
           <span className="text-[10px] font-mono text-slate-500 uppercase block">HARDWARE ACCEL</span>
           <span className="text-xl font-black font-heading text-slate-900 mt-1 block">
-            {status?.device ?? 'CPU MODE'}
+            {status?.device ?? 'CPU'}
           </span>
           <span className="text-[9px] text-sky-600 font-mono">PYTORCH INFERENCE</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.07)]">
           <span className="text-[10px] font-mono text-slate-500 uppercase block">PROCESSING FPS</span>
-          <span className="text-xl font-black font-heading text-emerald-700 mt-1 block">30 FPS</span>
-          <span className="text-[9px] text-slate-400 font-mono">INGESTION DECODER</span>
+          <span className="text-xl font-black font-heading text-slate-400 mt-1 block font-mono">NOT MEASURED</span>
+          <span className="text-[9px] text-slate-400 font-mono">MEASURED DURING INFERENCE</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.07)]">
           <span className="text-[10px] font-mono text-slate-500 uppercase block">INFERENCE LATENCY</span>
-          <span className="text-xl font-black font-heading text-sky-700 mt-1 block">85 ms</span>
-          <span className="text-[9px] text-slate-400 font-mono">PER SAMPLED FRAME</span>
+          <span className="text-xl font-black font-heading text-slate-400 mt-1 block font-mono">NOT MEASURED</span>
+          <span className="text-[9px] text-slate-400 font-mono">VARIES BY HARDWARE</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.07)]">
-          <span className="text-[10px] font-mono text-slate-500 uppercase block">SYSTEM MEMORY</span>
-          <span className="text-xl font-black font-heading text-slate-900 mt-1 block">NORMAL</span>
-          <span className="text-[9px] text-emerald-600 font-mono">STABLE BUFFER</span>
+          <span className="text-[10px] font-mono text-slate-500 uppercase block">SYSTEM UPTIME</span>
+          <span className="text-xl font-black font-heading text-sky-700 mt-1 block font-mono">
+            {status ? `${Math.floor(status.uptime_seconds / 60)}m` : 'NOT AVAILABLE'}
+          </span>
+          <span className="text-[9px] text-slate-400 font-mono">BACKEND UPTIME</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(15,23,42,0.07)]">
           <span className="text-[10px] font-mono text-slate-500 uppercase block">GPU VRAM</span>
           <span className="text-xl font-black font-heading text-slate-400 mt-1 block font-mono">NOT MEASURED</span>
-          <span className="text-[9px] text-slate-400 font-mono">HONEST BENCHMARK</span>
+          <span className="text-[9px] text-slate-400 font-mono">CPU MODE ACTIVE</span>
         </div>
       </div>
 

@@ -14,6 +14,7 @@ import {
   X,
   Flame,
   Waves,
+  Video,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ interface SidebarProps {
 const Sidebar: FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const navLinks = [
     { to: '/', label: 'COMMAND CENTER', icon: LayoutDashboard, badge: 'LIVE' },
+    { to: '/camera', label: 'LIVE CAMERA', icon: Video },
     { to: '/analysis', label: 'ANALYSIS', icon: BarChart3 },
     { to: '/survivors', label: 'SURVIVORS', icon: Users, alertCount: 4 },
     { to: '/evidence', label: 'EVIDENCE CHAIN', icon: GitMerge },

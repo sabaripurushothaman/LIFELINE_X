@@ -104,4 +104,23 @@ export const api = {
   // ─── Evaluation ────────────────────────────────────────────────────────────
 
   getEvaluation: () => apiFetch('/api/evaluation'),
+
+  // ─── Emergency Routing ─────────────────────────────────────────────────────
+
+  getRouting: (
+    from_lat: number,
+    from_lon: number,
+    to_lat: number,
+    to_lon: number,
+    track_id?: string,
+  ) => {
+    const params = new URLSearchParams({
+      from_lat: String(from_lat),
+      from_lon: String(from_lon),
+      to_lat: String(to_lat),
+      to_lon: String(to_lon),
+      ...(track_id ? { track_id } : {}),
+    });
+    return apiFetch(`/api/routing?${params.toString()}`);
+  },
 };
