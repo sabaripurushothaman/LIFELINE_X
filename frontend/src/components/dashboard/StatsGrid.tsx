@@ -19,6 +19,7 @@ export interface LiveStats {
   isRealSession?: boolean;
   sessionName?: string;
   hasAnalyzed?: boolean;
+  isDemoMode?: boolean;
 }
 
 interface StatsGridProps {
@@ -27,25 +28,30 @@ interface StatsGridProps {
 
 const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
   const isReal = liveStats?.isRealSession && liveStats?.hasAnalyzed;
+  const isDemo = liveStats?.isDemoMode ?? false;
 
   const getCandidateVal = () => {
     if (isReal) return String(liveStats?.totalCandidates ?? 0);
-    return '4';
+    if (isDemo) return '4';
+    return 'NO ANALYSIS DATA';
   };
 
   const getCriticalVal = () => {
     if (isReal) return String(liveStats?.criticalCount ?? 0);
-    return '1';
+    if (isDemo) return '1';
+    return '—';
   };
 
   const getHighVal = () => {
     if (isReal) return String(liveStats?.highCount ?? 0);
-    return '2';
+    if (isDemo) return '2';
+    return '—';
   };
 
   const getVerifyVal = () => {
     if (isReal) return String(liveStats?.verifyCount ?? 0);
-    return '1';
+    if (isDemo) return '1';
+    return '—';
   };
 
   const getConfVal = () => {
@@ -55,7 +61,8 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
       }
       return liveStats?.totalCandidates === 0 ? 'NO DETECTIONS' : '92.0%';
     }
-    return '91.4%';
+    if (isDemo) return '91.4%';
+    return 'NOT MEASURED';
   };
 
   const getCoverageVal = () => {
@@ -65,88 +72,111 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
       }
       return 'GPS MAPPED';
     }
-    return '68%';
+    if (isDemo) return '68%';
+    return 'NOT CONFIGURED';
   };
 
   const cards = [
     {
       label: 'PERSON CANDIDATES',
       value: getCandidateVal(),
-      subtext: isReal ? (liveStats?.sessionName ? `Video: ${liveStats.sessionName}` : 'Selected video session') : 'AI-detected in sector',
+      subtext: isReal
+        ? (liveStats?.sessionName ? `Video: ${liveStats.sessionName}` : 'Selected video session')
+        : isDemo
+        ? 'AI-detected in sector (Demo)'
+        : 'Waiting for video analysis',
       icon: Users,
       accentColor: '#0284c7',
       accentBg: '#eff6ff',
       accentBorder: '#bae6fd',
       accentText: '#0284c7',
-      badge: isReal ? 'REAL VIDEO' : 'DEMO MODE',
+      badge: isReal ? 'REAL VIDEO' : isDemo ? 'DEMO MODE' : 'WAITING',
       badgeClass: isReal
         ? 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold'
-        : 'bg-amber-50 text-amber-800 border-amber-200 font-bold',
+        : isDemo
+        ? 'bg-amber-50 text-amber-800 border-amber-200 font-bold'
+        : 'bg-slate-100 text-slate-500 border-slate-200',
     },
     {
       label: 'CRITICAL TRIAGE',
       value: getCriticalVal(),
-      subtext: 'Immediate response required',
+      subtext: isReal ? 'Immediate response required' : isDemo ? 'Demo critical queue' : 'Awaiting real detections',
       icon: AlertTriangle,
       accentColor: '#dc2626',
       accentBg: '#fef2f2',
       accentBorder: '#fecaca',
       accentText: '#dc2626',
-      badge: isReal ? 'SESSION' : 'DEMO',
-      badgeClass: 'bg-red-50 text-red-700 border-red-200 font-black',
-      pulse: isReal ? (liveStats?.criticalCount ?? 0) > 0 : true,
+      badge: isReal ? 'SESSION' : isDemo ? 'DEMO' : 'IDLE',
+      badgeClass: isReal
+        ? 'bg-red-50 text-red-700 border-red-200 font-black'
+        : isDemo
+        ? 'bg-red-50 text-red-700 border-red-200'
+        : 'bg-slate-100 text-slate-400 border-slate-200',
+      pulse: isReal && (liveStats?.criticalCount ?? 0) > 0,
     },
     {
       label: 'HIGH PRIORITY',
       value: getHighVal(),
-      subtext: 'Persistent track or trapped',
+      subtext: isReal ? 'Persistent track or trapped' : isDemo ? 'Demo elevated queue' : 'Awaiting real detections',
       icon: Flame,
       accentColor: '#d97706',
       accentBg: '#fffbeb',
       accentBorder: '#fde68a',
       accentText: '#d97706',
-      badge: isReal ? 'SESSION' : 'DEMO',
-      badgeClass: 'bg-amber-50 text-amber-800 border-amber-200 font-bold',
+      badge: isReal ? 'SESSION' : isDemo ? 'DEMO' : 'IDLE',
+      badgeClass: isReal
+        ? 'bg-amber-50 text-amber-800 border-amber-200 font-bold'
+        : isDemo
+        ? 'bg-amber-50 text-amber-800 border-amber-200'
+        : 'bg-slate-100 text-slate-400 border-slate-200',
     },
     {
       label: 'VERIFY QUEUE',
       value: getVerifyVal(),
-      subtext: 'Low confidence / conflict',
+      subtext: isReal ? 'Low confidence / conflict' : isDemo ? 'Demo review queue' : 'Awaiting real detections',
       icon: ShieldAlert,
       accentColor: '#ca8a04',
       accentBg: '#fefce8',
       accentBorder: '#fef08a',
       accentText: '#ca8a04',
-      badge: isReal ? 'SESSION' : 'DEMO',
-      badgeClass: 'bg-yellow-50 text-yellow-800 border-yellow-200 font-bold',
+      badge: isReal ? 'SESSION' : isDemo ? 'DEMO' : 'IDLE',
+      badgeClass: isReal
+        ? 'bg-yellow-50 text-yellow-800 border-yellow-200 font-bold'
+        : isDemo
+        ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+        : 'bg-slate-100 text-slate-400 border-slate-200',
     },
     {
       label: 'DETECTION CONF.',
       value: getConfVal(),
-      subtext: isReal ? 'Actual candidate average' : 'Demo model benchmark',
+      subtext: isReal ? 'Actual candidate average' : isDemo ? 'Demo model benchmark' : 'No real inference yet',
       icon: Cpu,
       accentColor: '#0891b2',
       accentBg: '#ecfeff',
       accentBorder: '#a5f3fc',
       accentText: '#0891b2',
-      badge: isReal ? 'ACTUAL' : 'DEMO BENCHMARK',
+      badge: isReal ? 'ACTUAL' : isDemo ? 'DEMO BENCHMARK' : 'UNMEASURED',
       badgeClass: isReal
         ? 'bg-cyan-50 text-cyan-800 border-cyan-200 font-bold'
-        : 'bg-slate-100 text-slate-600 border-slate-200 font-bold',
+        : isDemo
+        ? 'bg-slate-100 text-slate-600 border-slate-200 font-bold'
+        : 'bg-slate-100 text-slate-400 border-slate-200',
     },
     {
       label: 'SEARCH COVERAGE',
       value: getCoverageVal(),
-      subtext: isReal ? 'Corridor telemetry synced' : 'Demo search corridor',
+      subtext: isReal ? 'Corridor telemetry synced' : isDemo ? 'Demo search corridor' : 'No flight telemetry',
       icon: Crosshair,
       accentColor: '#16a34a',
       accentBg: '#f0fdf4',
       accentBorder: '#bbf7d0',
       accentText: '#16a34a',
-      badge: isReal ? 'REAL MISSION' : 'DEMO CORRIDOR',
+      badge: isReal ? 'REAL MISSION' : isDemo ? 'DEMO CORRIDOR' : 'AWAITING',
       badgeClass: isReal
         ? 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold'
-        : 'bg-slate-100 text-slate-600 border-slate-200 font-bold',
+        : isDemo
+        ? 'bg-slate-100 text-slate-600 border-slate-200 font-bold'
+        : 'bg-slate-100 text-slate-400 border-slate-200',
     },
   ];
 
@@ -154,6 +184,7 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
       {cards.map((card, idx) => {
         const Icon = card.icon;
+        const isLongText = card.value.length > 8;
         return (
           <div
             key={idx}
@@ -185,7 +216,9 @@ const StatsGrid: FC<StatsGridProps> = ({ liveStats }) => {
             {/* Big Value */}
             <div>
               <div
-                className="text-3xl sm:text-4xl font-black font-heading tracking-tight leading-none flex items-center gap-2"
+                className={`${
+                  isLongText ? 'text-lg sm:text-xl font-bold tracking-normal' : 'text-3xl sm:text-4xl font-black tracking-tight'
+                } font-heading leading-none flex items-center gap-2`}
                 style={{ color: card.accentColor }}
               >
                 {card.value}

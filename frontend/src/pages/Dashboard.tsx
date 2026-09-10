@@ -19,6 +19,7 @@ import type { SurvivorCandidate } from '../types';
 const Dashboard: React.FC = () => {
   const { currentAnalysisId, currentAnalysis, analyses } = useSession();
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+  const [dashboardCandidates, setDashboardCandidates] = useState<SurvivorCandidate[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +35,7 @@ const Dashboard: React.FC = () => {
           };
 
           const candidates = res.candidates ?? [];
+          setDashboardCandidates(candidates);
           const avgConf =
             candidates.length > 0
               ? candidates.reduce((acc, c) => acc + (c.detection_confidence || 0), 0) / candidates.length
@@ -49,9 +51,9 @@ const Dashboard: React.FC = () => {
             isRealSession: true,
             hasAnalyzed: currentAnalysis?.status === 'COMPLETE',
             sessionName: currentAnalysis?.video_filename || currentAnalysisId,
+            isDemoMode: false,
           });
         } else if (analyses.length > 0) {
-          // Default to first analysis
           const first = analyses[0];
           setLiveStats({
             totalCandidates: first.candidate_count ?? 0,
@@ -62,20 +64,23 @@ const Dashboard: React.FC = () => {
             isRealSession: true,
             hasAnalyzed: first.status === 'COMPLETE',
             sessionName: first.video_filename || first.id,
+            isDemoMode: false,
           });
         } else {
-          // Demo fallback
+          setDashboardCandidates([]);
           setLiveStats({
-            totalCandidates: 4,
-            criticalCount: 1,
-            highCount: 2,
-            verifyCount: 1,
+            totalCandidates: 0,
+            criticalCount: 0,
+            highCount: 0,
+            verifyCount: 0,
             backendOnline: true,
             isRealSession: false,
             hasAnalyzed: false,
+            isDemoMode: false,
           });
         }
       } catch {
+        setDashboardCandidates([]);
         setLiveStats({
           totalCandidates: 0,
           criticalCount: 0,
@@ -84,6 +89,7 @@ const Dashboard: React.FC = () => {
           backendOnline: false,
           isRealSession: false,
           hasAnalyzed: false,
+          isDemoMode: false,
         });
       }
     };
@@ -292,7 +298,12 @@ const Dashboard: React.FC = () => {
             VIEW ALL SURVIVOR CANDIDATES <ArrowUpRight className="w-4 h-4" />
           </button>
         </div>
-        <RecentDetections />
+        <RecentDetections
+          candidates={dashboardCandidates}
+          isReal={isReal}
+          sessionName={currentAnalysis?.video_filename || currentAnalysisId || ''}
+          hasAnalyzed={currentAnalysis?.status === 'COMPLETE'}
+        />
       </div>
 
       {/* ── Safety Advisory Footer ── */}

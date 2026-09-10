@@ -160,10 +160,13 @@ const MapView = () => {
       ? geoLocated
       : geoLocated.filter((c) => c.rescue_priority === activeFilter);
 
+  const isRealSession = !!currentAnalysisId || analyses.length > 0;
+  const hasGpsData = geoLocated.length > 0;
+
   // Initialize MapLibre
   useEffect(() => {
     if (!mapRef.current) return;
-    const targetCandidates = displayMarkers.length > 0 ? displayMarkers : DEMO_MAP_CANDIDATES;
+    const targetCandidates = isRealSession ? displayMarkers : DEMO_MAP_CANDIDATES;
 
     const initMap = async () => {
       try {
@@ -174,8 +177,8 @@ const MapView = () => {
         }
 
         const center: [number, number] =
-          targetCandidates.length > 0
-            ? [targetCandidates[0].longitude!, targetCandidates[0].latitude!]
+          targetCandidates.length > 0 && targetCandidates[0].longitude && targetCandidates[0].latitude
+            ? [targetCandidates[0].longitude, targetCandidates[0].latitude]
             : [80.1643, 13.0421];
 
         const map = new maplibregl.Map({
@@ -756,6 +759,19 @@ const MapView = () => {
       {/* Main Map Canvas */}
       <div className="relative rounded-2xl overflow-hidden border border-slate-300 shadow-[0_8px_32px_rgba(15,23,42,0.15)] bg-slate-900">
         <div ref={mapRef} className="w-full h-[580px]" />
+
+        {/* Real Mode No GPS Banner */}
+        {isRealSession && !hasGpsData && (
+          <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md border border-amber-400/60 rounded-xl p-4 text-xs font-mono text-white shadow-xl flex items-center gap-3 max-w-md">
+            <AlertTriangle className="w-6 h-6 text-amber-400 flex-shrink-0" />
+            <div>
+              <div className="font-bold text-amber-300 text-sm">NO GPS DATA IN THIS VIDEO</div>
+              <div className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                Flight telemetry CSV was not attached for session {currentAnalysisId}. Ground coordinates cannot be fabricated.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* HUD Map Legend & Mission Status */}
         <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md border border-slate-200 rounded-xl p-3.5 text-xs font-mono text-slate-700 space-y-2 shadow-lg max-w-xs">

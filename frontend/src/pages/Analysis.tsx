@@ -48,11 +48,12 @@ const Analysis = () => {
 
   const navigate = useNavigate();
 
+  const isVideoMissing = !!currentAnalysisId && !currentAnalysis && !activeJob && analyses.length > 0;
   // If there are no sessions at all, always show the upload form
   const shouldShowUploadForm =
     isUploadingNew ||
     analyses.length === 0 ||
-    (!currentAnalysis && !activeJob);
+    (!currentAnalysis && !activeJob && !isVideoMissing);
 
   // Inspect video metadata on file selection
   const handleVideoSelect = (file: File | null) => {
@@ -178,6 +179,26 @@ const Analysis = () => {
             className="px-5 py-2 rounded-xl bg-white border border-red-300 text-red-800 text-xs font-mono font-bold hover:bg-red-50 transition-colors"
           >
             TRY AGAIN
+          </button>
+        </div>
+      )}
+
+      {/* Video No Longer Available State */}
+      {isVideoMissing && (
+        <div className="p-6 sm:p-8 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm space-y-3 font-mono">
+          <div className="flex items-center gap-3 text-amber-800">
+            <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+            <h3 className="font-heading font-black text-lg sm:text-xl">VIDEO NO LONGER AVAILABLE</h3>
+          </div>
+          <p className="text-xs sm:text-sm text-amber-900 leading-relaxed">
+            The referenced video analysis session ({currentAnalysisId}) was deleted or is no longer present in database records.
+          </p>
+          <button
+            type="button"
+            onClick={handleStartNewUpload}
+            className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-mono font-bold transition-all shadow-sm"
+          >
+            UPLOAD ANOTHER VIDEO
           </button>
         </div>
       )}
