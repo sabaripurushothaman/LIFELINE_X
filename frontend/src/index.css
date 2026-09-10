@@ -1,107 +1,127 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/* ─── Tailwind v4 Theme Variables ───────────────────────── */
 @theme {
-  --color-first:    #5f5dbd;
-  --color-second:   #5e87b8;
-  --color-third:    #83cee0;
-  --color-fourth:   #a4fbe3;
+  --color-mint:     #ADF7D1;
+  --color-aqua:     #95E8D7;
+  --color-blue:     #7DACE4;
+  --color-purple:   #8971D0;
 
-  --color-sky-50:   #f4f6fc;
-  --color-sky-100:  #e7edfa;
-  --color-sky-200:  #c9d8f3;
-  --color-sky-300:  #83cee0;
-  --color-sky-400:  #83cee0;
-  --color-sky-500:  #5f5dbd;
-  --color-sky-600:  #504ea8;
-  --color-sky-700:  #424091;
-  --color-sky-800:  #343272;
-  --color-sky-900:  #1e1d4d;
-  --color-sky-950:  #16153b;
+  --color-first:    #ADF7D1;
+  --color-second:   #95E8D7;
+  --color-third:    #7DACE4;
+  --color-fourth:   #8971D0;
 
-  --color-cyan-300: #a4fbe3;
-  --color-cyan-400: #83cee0;
-  --color-cyan-500: #5e87b8;
-  --color-cyan-600: #5f5dbd;
+  --color-sky-50:   #f0f7fd;
+  --color-sky-100:  #e0effa;
+  --color-sky-200:  #c2def5;
+  --color-sky-300:  #95E8D7;
+  --color-sky-400:  #7DACE4;
+  --color-sky-500:  #7DACE4;
+  --color-sky-600:  #5e94d6;
+  --color-sky-700:  #8971D0;
+  --color-sky-800:  #6c52b8;
+  --color-sky-900:  #4f3899;
+
+  --color-cyan-100: #f0fdfa;
+  --color-cyan-200: #ccfbf1;
+  --color-cyan-300: #ADF7D1;
+  --color-cyan-400: #95E8D7;
+  --color-cyan-500: #7DACE4;
+
+  --color-slate-900: #111827;
+  --color-slate-800: #1f2937;
+  --color-slate-700: #374151;
+  --color-slate-600: #4B5563;
+  --color-slate-500: #4B5563;
+  --color-slate-400: #6B7280;
 }
 
 :root {
-  /* ─── User Color Palette ───────────────────────────────── */
-  --first-color:    #5f5dbd;        /* Deep Iris / Violet-Blue */
-  --second-color:   #5e87b8;        /* Steel Slate Blue */
-  --third-color:    #83cee0;        /* Soft Sky Cyan */
-  --fourth-color:   #a4fbe3;        /* Mint / Aquamarine */
+  /* ─── Primary Visual Palette (User Specified) ─────────── */
+  --color-mint:     #ADF7D1;        /* FIRST COLOR: Mint */
+  --color-aqua:     #95E8D7;        /* SECOND COLOR: Aqua */
+  --color-blue:     #7DACE4;        /* THIRD COLOR: Blue */
+  --color-purple:   #8971D0;        /* FOURTH COLOR: Purple */
 
-  /* ─── Page Surfaces ─────────────────────────────────────── */
-  --bg-page:        #f3f6fa;        /* Soft ambient page background */
-  --bg-card:        #ffffff;        /* Crisp white card surface */
-  --bg-surface:     rgba(131, 206, 224, 0.08); /* Tinted with third-color */
-  --bg-surface-2:   rgba(94, 135, 184, 0.10);  /* Tinted with second-color */
-  --bg-header:      #ffffff;
-  --bg-sidebar:     #1e1d4d;        /* Deep navy-violet derived from first-color */
-  --bg-sidebar-alt: #2c2b69;
-  --bg-input:       #f9fbfe;
+  --first-color:    #ADF7D1;
+  --second-color:   #95E8D7;
+  --third-color:    #7DACE4;
+  --fourth-color:   #8971D0;
 
-  /* ─── Typography ────────────────────────────────────────── */
-  --text-primary:   #0f172a;
-  --text-secondary: #334155;
-  --text-muted:     #64748b;
-  --text-faint:     #94a3b8;
+  /* ─── Mandatory Dark Text System ──────────────────────── */
+  --text-primary:   #111827;        /* Main headings, values, primary labels */
+  --text-secondary: #374151;        /* Body text, table rows, descriptions */
+  --text-muted:     #4B5563;        /* Subtitles, secondary labels, hints */
+  --text-faint:     #6B7280;        /* High-contrast accessible faint text */
   --text-on-dark:   #f8fafc;
 
-  /* ─── Borders ───────────────────────────────────────────── */
-  --border:         #cbd5e1;
-  --border-subtle:  #e2e8f0;
-  --border-strong:  #94a3b8;
-  --border-accent:  rgba(95, 93, 189, 0.40); /* first-color border accent */
+  /* ─── Page Surfaces & Layout ─────────────────────────── */
+  --bg-page:        #f4f7fb;        /* Soft neutral page background */
+  --bg-card:        #ffffff;        /* Pure white card surface */
+  --bg-surface:     #f8fafc;        /* Clean light surface */
+  --bg-surface-tint:rgba(125, 172, 228, 0.08); /* Soft blue tint */
+  --bg-header:      #ffffff;
+  --bg-sidebar:     #ffffff;        /* Modern clean light sidebar */
+  --bg-sidebar-alt: #f8fafc;
+  --bg-input:       #ffffff;
 
-  /* ─── Palette-Driven Theme Tokens ───────────────────────── */
-  --primary-navy:   #1e1d4d;
-  --primary-dark:   #16153b;
-  --accent:         #5f5dbd;        /* first-color */
-  --accent-light:   rgba(95, 93, 189, 0.14);
-  --accent-lighter: rgba(95, 93, 189, 0.08);
-  --accent-bg:      #f4f4fd;
-  --accent-hover:   #4e4ca8;
+  /* ─── Borders ─────────────────────────────────────────── */
+  --border:         #e5e7eb;
+  --border-subtle:  #f3f4f6;
+  --border-strong:  #cbd5e1;
+  --border-accent:  rgba(125, 172, 228, 0.50);
+  --border-purple:  rgba(137, 113, 208, 0.40);
 
-  --accent-secondary: #5e87b8;      /* second-color */
-  --accent-cyan:      #83cee0;      /* third-color */
-  --accent-mint:      #a4fbe3;      /* fourth-color */
+  /* ─── Accents ─────────────────────────────────────────── */
+  --accent:         #7DACE4;
+  --accent-purple:  #8971D0;
+  --accent-aqua:    #95E8D7;
+  --accent-mint:    #ADF7D1;
 
-  /* ─── Emergency & Semantic Queues ───────────────────────── */
-  --critical:       #dc2626;        /* CRITICAL — emergency red */
+  --accent-light:   rgba(125, 172, 228, 0.15);
+  --accent-lighter: rgba(125, 172, 228, 0.08);
+  --accent-bg:      #f0f7fd;
+  --accent-hover:   #6497d5;
+
+  /* ─── Semantic Queue Status Colors ───────────────────── */
+  --critical:       #dc2626;        /* Red */
   --critical-bg:    #fef2f2;
-  --critical-light: rgba(220, 38, 38, 0.14);
-  --critical-border:rgba(220, 38, 38, 0.40);
+  --critical-border:#fca5a5;
+  --critical-text:  #991b1b;
+  --critical-light: rgba(220, 38, 38, 0.12);
 
-  --high:           #d97706;        /* HIGH — orange/amber */
+  --high:           #d97706;        /* Amber */
   --high-bg:        #fffbeb;
-  --high-light:     rgba(217, 119, 6, 0.14);
-  --high-border:    rgba(217, 119, 6, 0.40);
+  --high-border:    #fcd34d;
+  --high-text:      #92400e;
+  --high-light:     rgba(217, 119, 6, 0.12);
 
-  --verify:         #ca8a04;        /* VERIFY — yellow/amber */
+  --verify:         #b45309;        /* Yellow */
   --verify-bg:      #fefce8;
-  --verify-light:   rgba(202, 138, 4, 0.14);
-  --verify-border:  rgba(202, 138, 4, 0.40);
+  --verify-border:  #fde047;
+  --verify-text:    #854d0e;
+  --verify-light:   rgba(180, 83, 9, 0.12);
 
-  --online:         #10b981;        /* CONFIRMED / HEALTHY — green */
-  --online-bg:      #f0fdf4;
-  --online-light:   rgba(164, 251, 227, 0.28); /* tinted with fourth-color */
-  --online-border:  rgba(16, 185, 129, 0.40);
+  --online:         #059669;        /* Green */
+  --online-bg:      #ecfdf5;
+  --online-border:  #95E8D7;
+  --online-text:    #065f46;
+  --online-light:   rgba(173, 247, 209, 0.35);
 
-  --neutral-slate:  #475569;        /* Neutral — slate/gray */
-  --neutral-bg:     #f1f5f9;
+  --neutral-slate:  #374151;
+  --neutral-bg:     #f3f4f6;
 
-  /* ─── Shadow System ──────────────────────────────────── */
-  --shadow-sm:   0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md:   0 4px 12px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06);
-  --shadow-lg:   0 8px 24px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.07);
-  --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
-  --shadow-accent: 0 4px 16px rgba(2, 132, 199, 0.25);
+  /* ─── Shadows ─────────────────────────────────────────── */
+  --shadow-sm:      0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow-md:      0 4px 12px rgba(17, 24, 39, 0.05), 0 1px 3px rgba(17, 24, 39, 0.04);
+  --shadow-lg:      0 10px 25px rgba(17, 24, 39, 0.07), 0 4px 10px rgba(17, 24, 39, 0.03);
+  --shadow-card:    0 1px 3px rgba(17, 24, 39, 0.05), 0 1px 2px rgba(17, 24, 39, 0.03);
 
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius:         0.5rem;
+  --radius-lg:      0.75rem;
+  --radius-xl:      1rem;
 }
 
 *,
@@ -131,24 +151,36 @@ body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 0.9375rem; /* 15px default base */
+  font-size: 0.9375rem;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
   background-image:
-    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(95, 93, 189, 0.07), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(131, 206, 224, 0.06), transparent 60%),
-    radial-gradient(ellipse 50% 30% at 0% 100%, rgba(164, 251, 227, 0.05), transparent 60%);
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(125, 172, 228, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(149, 232, 215, 0.07), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(173, 247, 209, 0.06), transparent 60%);
   background-attachment: fixed;
 }
 
-h1, h2, h3, .font-heading {
+/* ─── Typography (Dark & Clear) ─────────────────────────── */
+h1, h2, h3, h4, h5, h6, .font-heading {
   font-family: 'Outfit', sans-serif;
+  color: var(--text-primary);
   letter-spacing: -0.015em;
-  line-height: 1.25;
+  font-weight: 800;
 }
 
 code, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: -0.01em;
 }
+
+/* ─── Dark Text Enforcement ──────────────────────────────── */
+.text-slate-900, .text-gray-900 { color: #111827 !important; }
+.text-slate-800, .text-gray-800 { color: #1f2937 !important; }
+.text-slate-700, .text-gray-700 { color: #374151 !important; }
+.text-slate-600, .text-gray-600 { color: #4B5563 !important; }
+.text-slate-500, .text-gray-500 { color: #4B5563 !important; }
+.text-slate-400, .text-gray-400 { color: #6B7280 !important; }
 
 /* ─── Scrollbars ─────────────────────────────────────────── */
 ::-webkit-scrollbar {
@@ -166,13 +198,13 @@ code, pre, .font-mono {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--accent);
+  background-color: var(--color-blue);
 }
 
 /* ─── Card Utilities ─────────────────────────────────────── */
 .bright-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
@@ -192,103 +224,80 @@ code, pre, .font-mono {
 
 .bright-surface {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
-/* ─── Priority Accents ───────────────────────────────────── */
-.card-critical {
-  border-left: 3px solid var(--critical);
-  background: var(--bg-card);
-}
+/* ─── User Color Palette Classes ─────────────────────────── */
+.first-color  { background-color: #ADF7D1 !important; color: #065f46 !important; }
+.second-color { background-color: #95E8D7 !important; color: #0f4a3e !important; }
+.third-color  { background-color: #7DACE4 !important; color: #ffffff !important; }
+.fourth-color { background-color: #8971D0 !important; color: #ffffff !important; }
 
-.card-high {
-  border-left: 3px solid var(--high);
-  background: var(--bg-card);
-}
+.bg-mint   { background-color: #ADF7D1 !important; }
+.bg-aqua   { background-color: #95E8D7 !important; }
+.bg-blue   { background-color: #7DACE4 !important; }
+.bg-purple { background-color: #8971D0 !important; }
 
-.card-verify {
-  border-left: 3px solid var(--verify);
-  background: var(--bg-card);
-}
+.text-mint   { color: #065f46 !important; }
+.text-aqua   { color: #0f4a3e !important; }
+.text-blue   { color: #2563eb !important; }
+.text-purple { color: #6d28d9 !important; }
 
-/* ─── Color Palette Classes (User Defined) ───────────────── */
-.first-color { 
-	background: #5f5dbd; 
-}
-	
-.second-color { 
-	background: #5e87b8; 
-}
-
-.third-color { 
-	background: #83cee0; 
-}
-
-.fourth-color { 
-	background: #a4fbe3; 
-}
-
-.text-first-color { color: #5f5dbd; }
-.text-second-color { color: #5e87b8; }
-.text-third-color { color: #83cee0; }
-.text-fourth-color { color: #a4fbe3; }
-
-.border-first-color { border-color: #5f5dbd; }
-.border-second-color { border-color: #5e87b8; }
-.border-third-color { border-color: #83cee0; }
-.border-fourth-color { border-color: #a4fbe3; }
+.border-mint   { border-color: #ADF7D1 !important; }
+.border-aqua   { border-color: #95E8D7 !important; }
+.border-blue   { border-color: #7DACE4 !important; }
+.border-purple { border-color: #8971D0 !important; }
 
 /* ─── Tactical Grid ──────────────────────────────────────── */
 .tactical-grid {
   background-image:
-    linear-gradient(rgba(95, 93, 189, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(95, 93, 189, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(125, 172, 228, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 172, 228, 0.05) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 /* ─── Status Dots ────────────────────────────────────────── */
-.dot-online  { width: 8px; height: 8px; border-radius: 50%; background: var(--online); box-shadow: 0 0 8px rgba(22,163,74,0.6); }
-.dot-offline { width: 8px; height: 8px; border-radius: 50%; background: var(--critical); box-shadow: 0 0 8px rgba(220,38,38,0.6); }
-.dot-warning { width: 8px; height: 8px; border-radius: 50%; background: var(--high); }
+.dot-online  { width: 8px; height: 8px; border-radius: 50%; background: #059669; box-shadow: 0 0 8px rgba(16,185,129,0.6); }
+.dot-offline { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; box-shadow: 0 0 8px rgba(220,38,38,0.6); }
+.dot-warning { width: 8px; height: 8px; border-radius: 50%; background: #d97706; }
 
-/* ─── Semantic Badge Utilities ───────────────────────────── */
+/* ─── Semantic Queue Badges (Preserving Meaning & Dark Text) ── */
 .badge-critical {
-  background: var(--critical-light);
-  border: 1px solid var(--critical-border);
-  color: var(--critical);
+  background: var(--critical-bg) !important;
+  border: 1px solid var(--critical-border) !important;
+  color: var(--critical-text) !important;
+  font-weight: 800 !important;
 }
 .badge-high {
-  background: var(--high-light);
-  border: 1px solid var(--high-border);
-  color: var(--high);
+  background: var(--high-bg) !important;
+  border: 1px solid var(--high-border) !important;
+  color: var(--high-text) !important;
+  font-weight: 700 !important;
 }
 .badge-verify {
-  background: var(--verify-light);
-  border: 1px solid var(--verify-border);
-  color: var(--verify);
+  background: var(--verify-bg) !important;
+  border: 1px solid var(--verify-border) !important;
+  color: var(--verify-text) !important;
+  font-weight: 700 !important;
 }
-.badge-online {
-  background: var(--online-light);
-  border: 1px solid var(--online-border);
-  color: var(--online);
+.badge-online,
+.badge-confirmed {
+  background: var(--online-light) !important;
+  border: 1px solid var(--color-aqua) !important;
+  color: var(--online-text) !important;
+  font-weight: 800 !important;
 }
 .badge-accent {
-  background: var(--accent-light);
-  border: 1px solid var(--border-accent);
-  color: var(--accent);
-}
-.badge-confirmed {
-  background: var(--online-light);
-  border: 1px solid var(--online-border);
-  color: var(--online);
-  font-weight: 800;
+  background: var(--accent-light) !important;
+  border: 1px solid var(--border-accent) !important;
+  color: #1e3a8a !important;
 }
 .badge-false-positive {
-  background: var(--neutral-bg);
-  border: 1px solid var(--border);
-  color: var(--neutral-slate);
-  font-weight: 700;
+  background: var(--neutral-bg) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--neutral-slate) !important;
+  font-weight: 700 !important;
 }
 
 /* ─── Animations ─────────────────────────────────────────── */
@@ -338,24 +347,12 @@ code, pre, .font-mono {
   transition: width 0.6s ease;
 }
 
-/* ─── Drone Feed Viewport ────────────────────────────────── */
-.drone-viewport {
-  position: relative;
-  overflow: hidden;
-  background: #051926;
-}
-
-/* ─── Map Canvas ─────────────────────────────────────────── */
-.map-canvas {
-  background: linear-gradient(135deg, #cdd8e6 0%, #b8cade 40%, #a3bcd5 100%);
-}
-
 /* ─── Focus Rings ────────────────────────────────────────── */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-blue);
   outline-offset: 2px;
 }
 
@@ -364,79 +361,254 @@ select:focus-visible {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 40px rgba(17, 24, 39, 0.12), 0 4px 12px rgba(17, 24, 39, 0.05);
 }
 
-/* ─── Global Palette Overrides Across All Components ─────── */
-aside,
-[class*="bg-[#0f2a4a]"] {
-  background-color: #1e1d4d !important;
+/* ══════════════════════════════════════════════════════════
+   GLOBAL PALETTE & COMPONENT STYLING OVERRIDES
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── 1. Clean Modern Sidebar ────────────────────────────── */
+aside {
+  background: #ffffff !important;
+  border-right: 1px solid #e5e7eb !important;
+  box-shadow: 2px 0 16px rgba(17, 24, 39, 0.04) !important;
 }
 
+/* Sidebar top accent ribbon */
+aside > div:first-child {
+  background: linear-gradient(90deg, #ADF7D1 0%, #95E8D7 33%, #7DACE4 66%, #8971D0 100%) !important;
+  height: 3px !important;
+}
+
+/* Brand header */
+aside .text-white,
+aside .text-slate-100 {
+  color: #111827 !important;
+}
+aside .text-slate-400,
+aside .text-slate-500 {
+  color: #4B5563 !important;
+}
+aside .border-white\/10 {
+  border-color: #e5e7eb !important;
+}
+aside .bg-white\/5 {
+  background-color: #f8fafc !important;
+  border-color: #e5e7eb !important;
+}
+aside .bg-sky-500\/20 {
+  background-color: rgba(137, 113, 208, 0.12) !important;
+  border-color: rgba(137, 113, 208, 0.35) !important;
+}
+aside .text-sky-300,
+aside .text-sky-400 {
+  color: #8971D0 !important;
+}
+
+/* Inactive nav links */
+aside nav a {
+  color: #374151 !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+}
+aside nav a svg {
+  color: #4B5563 !important;
+}
+aside nav a:hover {
+  background-color: rgba(149, 232, 215, 0.18) !important;
+  color: #111827 !important;
+}
+aside nav a:hover svg {
+  color: #8971D0 !important;
+}
+
+/* Active nav link */
+aside nav a.active {
+  background: linear-gradient(135deg, rgba(137, 113, 208, 0.12) 0%, rgba(125, 172, 228, 0.18) 100%) !important;
+  border: 1px solid rgba(137, 113, 208, 0.40) !important;
+  color: #5b3fa8 !important;
+  font-weight: 700 !important;
+}
+aside nav a.active svg {
+  color: #8971D0 !important;
+}
+
+aside nav > div:first-child {
+  color: #4B5563 !important;
+  font-weight: 700 !important;
+}
+
+/* ─── 2. Top Header ──────────────────────────────────────── */
+header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.03) !important;
+}
+header h1, header h2, header .font-heading {
+  color: #111827 !important;
+}
+header p, header .text-slate-500 {
+  color: #4B5563 !important;
+}
+
+/* ─── 3. Command Center Hero Banner ──────────────────────── */
 [class*="from-[#0f2a4a]"] {
-  --tw-gradient-from: #1e1d4d var(--tw-gradient-from-position, ) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7fc 45%, #f4f0fd 100%) !important;
+  border: 1px solid rgba(125, 172, 228, 0.45) !important;
+  box-shadow: 0 4px 20px rgba(137, 113, 208, 0.08) !important;
 }
 
-[class*="via-[#142e52]"] {
-  --tw-gradient-via: #343272 var(--tw-gradient-via-position, ) !important;
+[class*="from-[#0f2a4a]"] h1 {
+  color: #111827 !important;
+}
+[class*="from-[#0f2a4a]"] p {
+  color: #374151 !important;
+}
+[class*="from-[#0f2a4a]"] .text-white {
+  color: #111827 !important;
+}
+[class*="from-[#0f2a4a]"] .text-slate-300 {
+  color: #374151 !important;
+}
+[class*="from-[#0f2a4a]"] .bg-white\/5,
+[class*="from-[#0f2a4a]"] .bg-white\/10 {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #374151 !important;
+}
+[class*="from-[#0f2a4a]"] .bg-sky-400\/15 {
+  background-color: rgba(125, 172, 228, 0.16) !important;
+  border-color: rgba(125, 172, 228, 0.40) !important;
+}
+[class*="from-[#0f2a4a]"] .text-sky-300 {
+  color: #1e40af !important;
+}
+[class*="from-[#0f2a4a]"] .text-sky-400 {
+  color: #8971D0 !important;
 }
 
-[class*="to-[#0a1e36]"] {
-  --tw-gradient-to: #5e87b8 var(--tw-gradient-to-position, ) !important;
-}
-
-/* Button & Accent Overrides */
-.bg-sky-500,
+/* ─── 4. Button Styling ──────────────────────────────────── */
+/* Primary CTA Buttons (Blue to Purple Gradient) */
 button.bg-sky-500,
-.bg-sky-600,
-button.bg-sky-600 {
-  background-color: #5f5dbd !important;
+button.bg-sky-600,
+.bg-sky-500,
+.bg-sky-600 {
+  background: linear-gradient(135deg, #7DACE4 0%, #8971D0 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(137, 113, 208, 0.40) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(137, 113, 208, 0.25) !important;
+  transition: all 0.15s ease !important;
 }
 
-.bg-sky-500:hover,
 button.bg-sky-500:hover,
-.hover\:bg-sky-400:hover,
-.hover\:bg-sky-500:hover {
-  background-color: #504ea8 !important;
+button.bg-sky-600:hover,
+.bg-sky-500:hover,
+.bg-sky-600:hover {
+  background: linear-gradient(135deg, #6ca0dc 0%, #765ec0 100%) !important;
+  box-shadow: 0 4px 14px rgba(137, 113, 208, 0.35) !important;
+  transform: translateY(-1px);
 }
 
+/* Secondary / Light Buttons: Always Dark Text */
+button.bg-sky-50,
+button.bg-white,
+button.bg-white\/10,
+.bg-sky-50 {
+  background-color: #f8fafc !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease !important;
+}
+
+button.bg-sky-50:hover,
+button.bg-white:hover,
+button.bg-white\/10:hover {
+  background-color: rgba(149, 232, 215, 0.22) !important;
+  border-color: #95E8D7 !important;
+  color: #111827 !important;
+}
+
+/* ─── 5. Tables & Grids ──────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead tr,
+tr.border-b.bg-slate-100\/80 {
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #e5e7eb !important;
+}
+
+th {
+  color: #374151 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f1f5f9 !important;
+  transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+  background-color: rgba(149, 232, 215, 0.12) !important;
+}
+
+td {
+  color: #111827 !important;
+}
+
+/* ─── 6. Inputs & Form Controls ──────────────────────────── */
+input, select, textarea {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+  border-radius: var(--radius) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid #7DACE4 !important;
+  border-color: #8971D0 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6B7280 !important;
+}
+
+/* ─── 7. Accent Elements & Text Colors ───────────────────── */
 .text-sky-400,
 .text-sky-300 {
-  color: #83cee0 !important;
+  color: #8971D0 !important;
 }
 
 .text-sky-500,
 .text-sky-600,
 .text-sky-700 {
-  color: #5f5dbd !important;
+  color: #3b68a3 !important;
 }
 
 .border-sky-400,
 .border-sky-500 {
-  border-color: #5f5dbd !important;
+  border-color: #7DACE4 !important;
 }
 
 .border-sky-200,
 .border-sky-300 {
-  border-color: #83cee0 !important;
+  border-color: rgba(125, 172, 228, 0.40) !important;
 }
 
 .bg-sky-50 {
-  background-color: rgba(131, 206, 224, 0.14) !important;
+  background-color: rgba(125, 172, 228, 0.10) !important;
 }
 
 .bg-sky-100 {
-  background-color: rgba(95, 93, 189, 0.14) !important;
-}
-
-.bg-sky-400\/15 {
-  background-color: rgba(131, 206, 224, 0.20) !important;
-}
-
-.border-sky-400\/30 {
-  border-color: rgba(131, 206, 224, 0.40) !important;
+  background-color: rgba(137, 113, 208, 0.10) !important;
 }
 
 .shadow-\[0_0_20px_rgba\(14\,165\,233\,0\.4\)\] {
-  box-shadow: 0 0 20px rgba(95, 93, 189, 0.45) !important;
+  box-shadow: 0 0 20px rgba(137, 113, 208, 0.35) !important;
 }
