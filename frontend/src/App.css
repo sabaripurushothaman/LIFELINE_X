@@ -1,2 +1,16 @@
-/* App.css — LIFELINE-X bright theme overrides */
-/* All design tokens and utilities live in index.css */
+/* App.css — LIFELINE-X user color palette */
+.first-color { 
+	background: #5f5dbd; 
+}
+	
+.second-color { 
+	background: #5e87b8; 
+}
+
+.third-color { 
+	background: #83cee0; 
+}
+
+.fourth-color { 
+	background: #a4fbe3; 
+}
