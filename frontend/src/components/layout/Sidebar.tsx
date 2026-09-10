@@ -47,15 +47,14 @@ const Sidebar: FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0f2a4a] text-slate-100 flex flex-col min-w-0 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0_24px_rgba(15,23,42,0.25)] ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0f2a4a] text-slate-100 flex flex-col min-w-0 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0_24px_rgba(15,23,42,0.25)] ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         {/* Top accent stripe */}
-        <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-cyan-400 to-sky-500 flex-shrink-0" />
+        <div className="h-1 w-full bg-linear-to-r from-sky-400 via-cyan-400 to-sky-500 shrink-0" />
 
         {/* Brand Header */}
-        <div className="px-4 py-4 flex-shrink-0 border-b border-white/10">
+        <div className="px-4 py-4 shrink-0 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Logo Icon */}
@@ -115,19 +114,17 @@ const Sidebar: FC<SidebarProps> = ({ isOpen = false, onClose }) => {
                 onClick={onClose}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `group flex items-center px-3 py-2.5 text-[11px] font-semibold rounded-lg transition-all duration-150 ${
-                    isActive
-                      ? 'bg-sky-500/20 text-white border border-sky-400/30 shadow-[inset_0_0_8px_rgba(14,165,233,0.1)]'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-white/8'
+                  `group flex items-center px-3 py-2.5 text-[11px] font-semibold rounded-lg transition-all duration-150 ${isActive
+                    ? 'bg-sky-500/20 text-white border border-sky-400/30 shadow-[inset_0_0_8px_rgba(14,165,233,0.1)]'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-white/8'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
                     <Icon
-                      className={`w-4 h-4 flex-shrink-0 mr-3 transition-all ${
-                        isActive ? 'text-sky-400' : 'text-slate-500 group-hover:text-slate-300'
-                      }`}
+                      className={`w-4 h-4 shrink-0 mr-3 transition-all ${isActive ? 'text-sky-400' : 'text-slate-500 group-hover:text-slate-300'
+                        }`}
                       aria-hidden="true"
                     />
                     <span className="tracking-wider flex-1">{link.label}</span>
@@ -151,7 +148,7 @@ const Sidebar: FC<SidebarProps> = ({ isOpen = false, onClose }) => {
         </nav>
 
         {/* Mission Footer */}
-        <div className="p-3 flex-shrink-0 border-t border-white/10">
+        <div className="p-3 shrink-0 border-t border-white/10">
           <div className="rounded-xl bg-white/5 border border-white/8 p-3 space-y-2">
             {/* Disaster identity icons */}
             <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-sky-400">

@@ -38,8 +38,8 @@ const QUALITY_CONFIG: Record<string, { color: string; bg: string; border: string
 
 const PRIORITY_BADGES: Record<RescuePriority, { label: string; style: string }> = {
   CRITICAL: { label: 'CRITICAL', style: 'bg-red-50 text-red-700 border-red-300' },
-  HIGH:     { label: 'HIGH',     style: 'bg-amber-50 text-amber-700 border-amber-300' },
-  VERIFY:   { label: 'VERIFY',   style: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
+  HIGH: { label: 'HIGH', style: 'bg-amber-50 text-amber-700 border-amber-300' },
+  VERIFY: { label: 'VERIFY', style: 'bg-yellow-50 text-yellow-700 border-yellow-300' },
 };
 
 // Fallback demo candidates
@@ -334,7 +334,7 @@ const CandidateEvidenceCard = ({ candidate, isInitiallyExpanded = false }: Candi
                   return (
                     <div key={idx} className="relative group">
                       {/* Animated connector node */}
-                      <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-white border-2 border-sky-400 flex items-center justify-center shadow-sm">
+                      <div className="absolute -left-7.75 sm:-left-9.75 top-1.5 w-4 h-4 rounded-full bg-white border-2 border-[#7DACE4] flex items-center justify-center shadow-sm">
                         <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                       </div>
 
@@ -440,11 +440,10 @@ const EvidenceChainPage = () => {
             Multi-modal evidence provenance breakdown for every survivor candidate. Transparent AI decision audit trail.
           </p>
         </div>
-        <span className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${
-          isDemo
-            ? 'bg-amber-50 border-amber-200 text-amber-700'
-            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-        }`}>
+        <span className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${isDemo
+          ? 'bg-amber-50 border-amber-200 text-amber-700'
+          : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+          }`}>
           {isDemo ? 'DEMO REPLAY' : `SESSION: ${currentAnalysis?.video_filename || currentAnalysisId}`}
         </span>
       </div>
