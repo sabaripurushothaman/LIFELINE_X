@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { SurvivorCandidate, RescuePriority, AiFlagExplanation } from '../types';
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
 
 const PRIORITY_CONFIG: Record<
   RescuePriority,
@@ -292,37 +294,57 @@ const DetailPanel = ({ candidate, explanation, onReview, onClose }: DetailPanelP
 };
 
 const Survivors = () => {
+  const { currentAnalysisId, currentAnalysis, analyses } = useSession();
   const [candidates, setCandidates] = useState<SurvivorCandidate[]>([]);
   const [selected, setSelected] = useState<SurvivorCandidate | null>(null);
   const [explanation, setExplanation] = useState<AiFlagExplanation | null>(null);
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const result = (await api.getSurvivors()) as { candidates: SurvivorCandidate[] };
-        setCandidates(result.candidates?.length > 0 ? result.candidates : DEMO_CANDIDATES);
+        if (currentAnalysisId) {
+          const result = (await api.getSurvivors(currentAnalysisId)) as { candidates: SurvivorCandidate[] };
+          setCandidates(result.candidates ?? []);
+          setIsDemo(false);
+        } else if (analyses.length > 0) {
+          const result = (await api.getSurvivors(analyses[0].id)) as { candidates: SurvivorCandidate[] };
+          setCandidates(result.candidates ?? []);
+          setIsDemo(false);
+        } else {
+          setCandidates(DEMO_CANDIDATES);
+          setIsDemo(true);
+        }
       } catch {
         setCandidates(DEMO_CANDIDATES);
+        setIsDemo(true);
       }
     };
     load();
-  }, []);
+  }, [currentAnalysisId, analyses.length]);
 
   const handleSelectCandidate = async (c: SurvivorCandidate) => {
     setSelected(c);
     setExplanation(null);
     try {
-      const detail = (await api.getSurvivor(c.track_id)) as { ai_flag_explanation: AiFlagExplanation; candidate: SurvivorCandidate };
+      const detail = (await api.getSurvivor(c.track_id, c.analysis_id || currentAnalysisId || undefined)) as {
+        ai_flag_explanation: AiFlagExplanation;
+        candidate: SurvivorCandidate;
+      };
       setExplanation(detail.ai_flag_explanation ?? null);
       if (detail.candidate) setSelected({ ...c, ...detail.candidate });
-    } catch { /* keep demo */ }
+    } catch { /* keep current */ }
   };
 
   const handleReview = async (decision: string) => {
     if (!selected) return;
     try {
-      await api.submitReview({ analysis_id: selected.analysis_id ?? 'demo-flood-001', track_id: selected.track_id, decision });
+      await api.submitReview({
+        analysis_id: selected.analysis_id ?? currentAnalysisId ?? 'demo-flood-001',
+        track_id: selected.track_id,
+        decision,
+      });
     } catch { /* local fallback */ }
     setSelected((prev) => (prev ? { ...prev, human_decision: decision } : null));
     setCandidates((prev) => prev.map((c) => (c.track_id === selected.track_id ? { ...c, human_decision: decision } : c)));
@@ -338,7 +360,7 @@ const Survivors = () => {
   const filtered = filterPriority === 'ALL' ? candidates : candidates.filter((c) => c.rescue_priority === filterPriority);
 
   const kpiCards = [
-    { label: 'TOTAL CANDIDATES', value: totalCount,    color: 'text-sky-700',     sub: 'SECTOR FLOOD-001',    topColor: '#0284c7' },
+    { label: 'TOTAL CANDIDATES', value: totalCount,    color: 'text-sky-700',     sub: currentAnalysis ? currentAnalysis.video_filename || currentAnalysis.id : 'SECTOR FLOOD-001', topColor: '#0284c7' },
     { label: 'CRITICAL',         value: criticalCount, color: 'text-red-700',     sub: 'IMMEDIATE TRIAGE',    topColor: '#dc2626' },
     { label: 'HIGH',             value: highCount,     color: 'text-amber-700',   sub: 'PERSISTENT SIGNALS',  topColor: '#d97706' },
     { label: 'VERIFY',           value: verifyCount,   color: 'text-yellow-700',  sub: 'ANOMALY REVIEW',      topColor: '#ca8a04' },
@@ -360,13 +382,20 @@ const Survivors = () => {
             </span>
           </div>
           <p className="text-slate-500 text-sm mt-1">
-            AI-detected human candidates requiring rescue-team verification & operational dispatch.
+            AI-detected human candidates requiring rescue-team verification &amp; operational dispatch.
           </p>
         </div>
-        <span className="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-50 border border-amber-200 text-amber-700">
-          DEMO DATA VERIFIED
+        <span className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border ${
+          isDemo
+            ? 'bg-amber-50 border-amber-200 text-amber-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          {isDemo ? 'DEMO DATA VERIFIED' : `SESSION: ${currentAnalysis?.video_filename || currentAnalysisId}`}
         </span>
       </div>
+
+      {/* Video Session Selector */}
+      {analyses.length > 0 && <SessionSelector />}
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -411,8 +440,20 @@ const Survivors = () => {
       </div>
 
       {/* Candidate Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((c) => {
+      {filtered.length === 0 ? (
+        <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 font-mono space-y-2">
+          <div className="text-slate-400 text-sm font-bold uppercase tracking-wider">
+            NO SURVIVOR CANDIDATES IN THIS QUEUE
+          </div>
+          <p className="text-xs text-slate-500">
+            {candidates.length === 0
+              ? `No human candidates detected in video session "${currentAnalysis?.video_filename || currentAnalysisId || ''}". Results are strictly isolated per video.`
+              : `No candidates match priority filter "${filterPriority}".`}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((c) => {
           const cfg = PRIORITY_CONFIG[c.rescue_priority] ?? PRIORITY_CONFIG.VERIFY;
           const detPercent  = Math.round(c.detection_confidence * 100);
           const survPercent = Math.round((c.survivor_confidence ?? c.detection_confidence) * 100);
@@ -513,6 +554,7 @@ const Survivors = () => {
           );
         })}
       </div>
+    )}
 
       {/* Detail Drawer */}
       {selected && (

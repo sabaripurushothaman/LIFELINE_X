@@ -10,23 +10,27 @@ import Coverage from './pages/Coverage';
 import Evaluation from './pages/Evaluation';
 import SystemHealth from './pages/SystemHealth';
 
+import { SessionProvider } from './context/SessionContext';
+
 const App = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<MainLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="camera" element={<LiveCamera />} />
-          <Route path="analysis" element={<Analysis />} />
-          <Route path="survivors" element={<Survivors />} />
-          <Route path="evidence" element={<EvidenceChain />} />
-          <Route path="map" element={<MapView />} />
-          <Route path="coverage" element={<Coverage />} />
-          <Route path="evaluation" element={<Evaluation />} />
-          <Route path="system" element={<SystemHealth />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <SessionProvider>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="camera" element={<LiveCamera />} />
+            <Route path="analysis" element={<Analysis />} />
+            <Route path="survivors" element={<Survivors />} />
+            <Route path="evidence" element={<EvidenceChain />} />
+            <Route path="map" element={<MapView />} />
+            <Route path="coverage" element={<Coverage />} />
+            <Route path="evaluation" element={<Evaluation />} />
+            <Route path="system" element={<SystemHealth />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </SessionProvider>
     </BrowserRouter>
   );
 };

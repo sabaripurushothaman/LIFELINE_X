@@ -2,63 +2,101 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import {
   Flame, Radio, AlertTriangle, Radar, ArrowUpRight, Waves,
-  ShieldAlert, CheckCircle2, Film,
+  ShieldAlert, CheckCircle2, Film, Layers,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import StatsGrid from '../components/dashboard/StatsGrid';
+import StatsGrid, { type LiveStats } from '../components/dashboard/StatsGrid';
 import RecentDetections from '../components/dashboard/RecentDetections';
-
-interface ApiStats {
-  totalCandidates: number;
-  criticalCount: number;
-  highCount: number;
-  verifyCount: number;
-  backendOnline: boolean;
-}
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
+import type { SurvivorCandidate } from '../types';
 
 /**
- * DASHBOARD — Concise mission overview only.
- * Full feature implementations are on their own dedicated pages.
- * No sidebar duplication or repetitive feature cards.
+ * DASHBOARD — Mission Overview & Command Center.
+ * Respects per-video analysis sessions and clearly separates
+ * CURRENT VIDEO RESULTS from MISSION TOTALS.
  */
 const Dashboard: React.FC = () => {
-  const [apiStats, setApiStats] = useState<ApiStats | null>(null);
+  const { currentAnalysisId, currentAnalysis, analyses } = useSession();
+  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
       try {
-        const survivors = await api.getSurvivors();
-        const s = survivors as {
-          count: number;
-          critical_count: number;
-          high_count: number;
-          verify_count: number;
-        };
-        setApiStats({
-          totalCandidates: s.count ?? 0,
-          criticalCount: s.critical_count ?? 0,
-          highCount: s.high_count ?? 0,
-          verifyCount: s.verify_count ?? 0,
-          backendOnline: true,
-        });
+        if (currentAnalysisId) {
+          const res = (await api.getSurvivors(currentAnalysisId)) as {
+            count: number;
+            critical_count: number;
+            high_count: number;
+            verify_count: number;
+            candidates: SurvivorCandidate[];
+          };
+
+          const candidates = res.candidates ?? [];
+          const avgConf =
+            candidates.length > 0
+              ? candidates.reduce((acc, c) => acc + (c.detection_confidence || 0), 0) / candidates.length
+              : 0;
+
+          setLiveStats({
+            totalCandidates: res.count ?? 0,
+            criticalCount: res.critical_count ?? 0,
+            highCount: res.high_count ?? 0,
+            verifyCount: res.verify_count ?? 0,
+            backendOnline: true,
+            avgConfidence: avgConf,
+            isRealSession: true,
+            hasAnalyzed: currentAnalysis?.status === 'COMPLETE',
+            sessionName: currentAnalysis?.video_filename || currentAnalysisId,
+          });
+        } else if (analyses.length > 0) {
+          // Default to first analysis
+          const first = analyses[0];
+          setLiveStats({
+            totalCandidates: first.candidate_count ?? 0,
+            criticalCount: first.critical_count ?? 0,
+            highCount: first.high_count ?? 0,
+            verifyCount: first.verify_count ?? 0,
+            backendOnline: true,
+            isRealSession: true,
+            hasAnalyzed: first.status === 'COMPLETE',
+            sessionName: first.video_filename || first.id,
+          });
+        } else {
+          // Demo fallback
+          setLiveStats({
+            totalCandidates: 4,
+            criticalCount: 1,
+            highCount: 2,
+            verifyCount: 1,
+            backendOnline: true,
+            isRealSession: false,
+            hasAnalyzed: false,
+          });
+        }
       } catch {
-        setApiStats({
+        setLiveStats({
           totalCandidates: 0,
           criticalCount: 0,
           highCount: 0,
           verifyCount: 0,
           backendOnline: false,
+          isRealSession: false,
+          hasAnalyzed: false,
         });
       }
     };
     load();
-  }, []);
+  }, [currentAnalysisId, currentAnalysis?.status, analyses]);
 
-  const hasRealData = apiStats !== null && apiStats.totalCandidates > 0;
+  const isReal = liveStats?.isRealSession && liveStats?.hasAnalyzed;
+  const totalMissionCandidates = analyses.reduce((acc, a) => acc + (a.candidate_count ?? 0), 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* ── Video Session Selector Bar ── */}
+      {analyses.length > 0 && <SessionSelector />}
 
       {/* ── Mission Hero Banner ── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f2a4a] via-[#142e52] to-[#0a1e36] shadow-[0_8px_32px_rgba(15,23,42,0.3)] p-6 md:p-8">
@@ -90,16 +128,20 @@ const Dashboard: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono pt-1">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-300">
                 <Flame className="w-4 h-4 text-amber-400" />
-                <span>INCIDENT: <strong className="text-white">FLOOD-001</strong></span>
+                <span>INCIDENT: <strong className="text-white">{currentAnalysis?.incident_id || 'FLOOD-001'}</strong></span>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-400/15 border border-sky-400/30 text-sky-300">
                 <Film className="w-4 h-4 text-sky-400" />
-                <span>UAV FOOTAGE: <strong className="text-white">4K REPLAY READY</strong></span>
+                <span>ACTIVE FOOTAGE: <strong className="text-white truncate max-w-[200px]">{currentAnalysis?.video_filename || 'DEMO REPLAY READY'}</strong></span>
               </div>
 
-              <span className="px-3 py-1.5 rounded-lg font-bold bg-amber-400/15 border border-amber-400/30 text-amber-300">
-                {hasRealData ? 'LIVE INFERENCE' : 'DEMO REPLAY MODE'}
+              <span className={`px-3 py-1.5 rounded-lg font-bold border ${
+                isReal
+                  ? 'bg-emerald-400/15 border-emerald-400/30 text-emerald-300'
+                  : 'bg-amber-400/15 border-amber-400/30 text-amber-300'
+              }`}>
+                {isReal ? 'LIVE SESSION INFERENCE' : 'DEMO REPLAY MODE'}
               </span>
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">
@@ -116,7 +158,7 @@ const Dashboard: React.FC = () => {
               onClick={() => navigate('/analysis')}
               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-heading font-black text-sm tracking-wider shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:shadow-[0_0_28px_rgba(14,165,233,0.6)] hover:scale-[1.02] transition-all"
             >
-              <span>RUN VIDEO ANALYSIS</span>
+              <span>{isReal ? 'VIEW VIDEO ANALYSIS' : 'RUN VIDEO ANALYSIS'}</span>
               <ArrowUpRight className="w-4 h-4" />
             </button>
 
@@ -132,8 +174,57 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── KPI Stats Grid (Real-time counts) ── */}
-      <StatsGrid liveStats={apiStats} />
+      {/* ── KPI Stats Grid (Per-Video Live Counts) ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs font-mono font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+            <Film className="w-4 h-4 text-sky-600" />
+            <span>CURRENT VIDEO RESULTS ({currentAnalysis?.video_filename || currentAnalysisId || 'DEMO SESSION'})</span>
+          </div>
+          {isReal && (
+            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold">
+              VERIFIED ACTUAL DATA
+            </span>
+          )}
+        </div>
+        <StatsGrid liveStats={liveStats} />
+      </div>
+
+      {/* ── Mission Multi-Video Summary (Distinguishing Current Video from Mission Totals) ── */}
+      {analyses.length > 1 && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 font-mono">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-sky-600" />
+              <h3 className="font-heading font-bold text-sm text-slate-900 uppercase">
+                MISSION TOTALS VS CURRENT VIDEO
+              </h3>
+            </div>
+            <span className="text-xs text-slate-500 font-bold">
+              {analyses.length} TOTAL VIDEOS ANALYZED IN THIS INCIDENT
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[10px] text-slate-500 block">TOTAL MISSION VIDEOS</span>
+              <span className="text-xl font-black text-slate-900">{analyses.length}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[10px] text-slate-500 block">TOTAL MISSION SURVIVORS</span>
+              <span className="text-xl font-black text-emerald-700">{totalMissionCandidates}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-sky-50 border border-sky-200">
+              <span className="text-[10px] text-sky-700 block font-bold">CURRENT VIDEO SURVIVORS</span>
+              <span className="text-xl font-black text-sky-800">{liveStats?.totalCandidates ?? 0}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <span className="text-[10px] text-amber-700 block font-bold">CRITICAL IN CURRENT VIDEO</span>
+              <span className="text-xl font-black text-red-700">{liveStats?.criticalCount ?? 0}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Mission Reconnaissance & Pipeline Summary Card ── */}
       <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_16px_rgba(15,23,42,0.06)] grid grid-cols-1 md:grid-cols-3 gap-6">

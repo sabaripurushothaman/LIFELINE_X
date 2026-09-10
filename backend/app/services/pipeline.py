@@ -48,10 +48,11 @@ def create_analysis_job(
     telemetry_bytes: Optional[bytes] = None,
     sample_every_n: int = 5,
     thermal_path: Optional[str] = None,
+    original_filename: Optional[str] = None,
 ) -> str:
     """Create an analysis job record. Returns analysis_id."""
     analysis_id = f"A-{uuid.uuid4().hex[:8].upper()}"
-    filename = Path(video_path).name
+    filename = original_filename or Path(video_path).name
     store = get_store()
 
     # Validate video first

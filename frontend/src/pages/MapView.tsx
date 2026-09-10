@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import type { SurvivorCandidate, RescuePriority } from '../types';
+import { useSession } from '../context/SessionContext';
+import SessionSelector from '../components/common/SessionSelector';
 
 const PRIORITY_COLORS: Record<RescuePriority, string> = {
   CRITICAL: '#ef4444',
@@ -102,8 +104,8 @@ interface RouteResult {
 }
 
 const MapView = () => {
+  const { currentAnalysisId, analyses } = useSession();
   const [candidates, setCandidates] = useState<SurvivorCandidate[]>([]);
-  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('');
   const [exporting, setExporting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'VERIFY'>('ALL');
   const [selectedMarker, setSelectedMarker] = useState<SurvivorCandidate | null>(null);
@@ -127,47 +129,30 @@ const MapView = () => {
   const markersRef = useRef<any[]>([]);
   const responderMarkerRef = useRef<any>(null);
 
-  // Load analyses list
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const result = (await api.listAnalyses()) as {
-          analyses: Array<{ id: string; incident_id: string }>;
-        };
-        const list = result.analyses ?? [];
-        if (list.length > 0) setSelectedAnalysisId(list[0].id);
-      } catch {
-        // Backend offline — fallback
-      }
-    };
-    load();
-  }, []);
-
   // Load map data
   useEffect(() => {
     const load = async () => {
+      const activeId = currentAnalysisId || (analyses.length > 0 ? analyses[0].id : '');
       try {
-        if (selectedAnalysisId) {
-          const result = await api.getMapData(selectedAnalysisId);
+        if (activeId) {
+          const result = await api.getMapData(activeId);
           const markers = (result as { markers: SurvivorCandidate[] }).markers ?? [];
           if (markers.length > 0) {
             setCandidates(markers);
             return;
           }
-        }
-        const survivorResult = await api.getSurvivors(selectedAnalysisId);
-        const list = (survivorResult as { candidates: SurvivorCandidate[] }).candidates ?? [];
-        if (list.length > 0) {
+          const survivorResult = await api.getSurvivors(activeId);
+          const list = (survivorResult as { candidates: SurvivorCandidate[] }).candidates ?? [];
           setCandidates(list);
-        } else {
-          setCandidates(DEMO_MAP_CANDIDATES);
+          return;
         }
+        setCandidates(DEMO_MAP_CANDIDATES);
       } catch {
         setCandidates(DEMO_MAP_CANDIDATES);
       }
     };
     load();
-  }, [selectedAnalysisId]);
+  }, [currentAnalysisId, analyses.length]);
 
   const geoLocated = candidates.filter((c) => c.latitude && c.longitude);
   const displayMarkers =
@@ -478,10 +463,11 @@ const MapView = () => {
   }, [showDronePath, showSearchSwath]);
 
   const handleExport = async (format: 'geojson' | 'csv' | 'json') => {
-    if (!selectedAnalysisId) return;
+    const activeId = currentAnalysisId || (analyses.length > 0 ? analyses[0].id : '');
+    if (!activeId) return;
     setExporting(true);
     try {
-      await api.exportAnalysis(selectedAnalysisId, format);
+      await api.exportAnalysis(activeId, format);
     } catch (e: unknown) {
       alert(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -568,6 +554,9 @@ const MapView = () => {
           </button>
         </div>
       </div>
+
+      {/* Video Session Selector Bar */}
+      {analyses.length > 0 && <SessionSelector />}
 
       {/* Emergency Routing Planner Panel */}
       {showRoutingPanel && (
