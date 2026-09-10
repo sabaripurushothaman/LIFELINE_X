@@ -198,54 +198,6 @@ const Analysis = () => {
         </p>
       </div>
 
-      {/* 12-Stage Visual Mission Workflow Tracker */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center justify-between text-xs font-mono text-slate-500">
-          <span className="font-heading font-bold uppercase tracking-wider text-slate-800">
-            AI DISASTER RECONNAISSANCE PIPELINE STAGES
-          </span>
-          <span>12 STAGES AUTOMATED</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-[10px] font-mono">
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            1. Drone Video
-          </div>
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            2. 4K Validation
-          </div>
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            3. Human YOLOv8
-          </div>
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            4. Animal Filter
-          </div>
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            5. ByteTrack ID
-          </div>
-          <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 font-semibold text-center">
-            6. Deduplication
-          </div>
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-center">
-            7. Movement
-          </div>
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-center">
-            8. Telemetry Sync
-          </div>
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-center">
-            9. Geolocation
-          </div>
-          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-center">
-            10. Evidence Chain
-          </div>
-          <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-red-800 font-semibold text-center">
-            11. Priority Triage
-          </div>
-          <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-red-800 font-semibold text-center">
-            12. Map Routing
-          </div>
-        </div>
-      </div>
-
       {/* Ingestion & Upload Form State */}
       {state.status === 'idle' && (
         <div className="space-y-5">
@@ -481,6 +433,26 @@ const Analysis = () => {
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div className="text-3xl font-black text-emerald-700">{state.candidatesFound}</div>
               <div className="text-xs text-slate-500 mt-1 uppercase">HUMAN CANDIDATES</div>
+            </div>
+          </div>
+
+          {/* Dynamic Active Pipeline Stages Status */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs font-mono">
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+              <span className="font-bold">1. YOLOv8 Person</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-bold">2. ByteTrack ID</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="font-bold">3. Geolocation</span>
+            </div>
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-bold">4. Evidence Synthesis</span>
             </div>
           </div>
         </div>
