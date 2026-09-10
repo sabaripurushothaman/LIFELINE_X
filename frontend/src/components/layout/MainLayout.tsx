@@ -11,6 +11,10 @@ const ROUTE_INFO: Record<string, { title: string; subtitle: string }> = {
     title: 'COMMAND CENTER',
     subtitle: 'AI Disaster Search Intelligence & Survivor Triage',
   },
+  '/camera': {
+    title: 'LIVE OPTICAL CAMERA FEED',
+    subtitle: 'Real-time RGB camera feed with automated detection overlay',
+  },
   '/analysis': {
     title: 'ANALYSIS & INGESTION',
     subtitle: 'Upload and process drone aerial video with synchronized telemetry',

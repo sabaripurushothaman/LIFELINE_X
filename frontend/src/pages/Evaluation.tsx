@@ -111,11 +111,11 @@ const Evaluation = () => {
           </span>
         </div>
 
-        <div className="divide-y divide-[rgba(30,58,95,0.5)]">
+        <div className="divide-y divide-slate-100">
           {metrics.map((metric, i) => (
             <div
               key={i}
-              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#071a38]/40 transition-all"
+              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-all"
             >
               <div className="flex items-start gap-3 min-w-0">
                 <div className="mt-0.5">
